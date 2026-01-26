@@ -6,21 +6,12 @@ from PySide6.QtWidgets import (QMainWindow, QToolBar, QLineEdit, QTabWidget,
                              QWidget, QHBoxLayout, QLabel)
 from PySide6.QtGui import QAction, QIcon, QPixmap, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWebChannel import QWebChannel
-
+from PySide6.QtWebEngineCore import QWebEngineSettings
 from src.config import TRANSLATIONS
 from src.ui_components import get_stylesheet
 from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
 from src.utils import generate_strong_password
-
-# Bridge class for JS to Python communication
-class PasswordBridge(QObject):
-    passwordFocused = Signal()
-
-    @Slot()
-    def onPasswordFocused(self):
-        self.passwordFocused.emit()
 
 class PrimityBrowser(QMainWindow):
     def __init__(self):
@@ -40,10 +31,6 @@ class PrimityBrowser(QMainWindow):
         
         # Dragging support
         self._old_pos = None
-
-        # Bridge for password detection
-        self.bridge = PasswordBridge()
-        self.bridge.passwordFocused.connect(self.suggest_password)
 
         # Main Central Widget and Layout
         self.central_widget = QWidget()
@@ -320,22 +307,28 @@ class PrimityBrowser(QMainWindow):
             widget = QWebEngineView()
             widget.setAttribute(Qt.WA_InputMethodEnabled, True)
             
-            # Setup bridge for password detection injection
-            channel = QWebChannel(widget.page())
-            widget.page().setWebChannel(channel)
-            channel.registerObject("bridge", self.bridge)
+            # Additional settings for focus and input compatibility
+            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.FocusOnNavigationEnabled, True)
+            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
             
-            injection_script = """
-            new QWebChannel(qt.webChannelTransport, function(channel) {
-                window.bridge = channel.objects.bridge;
-                document.addEventListener('focusin', function(e) {
-                    if (e.target.type === 'password') {
-                        window.bridge.onPasswordFocused();
-                    }
-                });
+            # Simple script to detect password focus and log to console
+            detection_script = """
+            document.addEventListener('focusin', function(e) {
+                if (e.target.type === 'password') {
+                    console.log("PRIMITY_PWD_FOCUS");
+                }
             });
             """
-            widget.loadFinished.connect(lambda _, b=widget: b.page().runJavaScript(injection_script))
+            
+            # Inject detection script
+            widget.loadFinished.connect(lambda _, b=widget: b.page().runJavaScript(detection_script))
+
+            # Handle notification via console messages
+            def handle_console_message(level, message, line, source):
+                if "PRIMITY_PWD_FOCUS" in message:
+                    self.suggest_password()
+            
+            widget.page().javaScriptConsoleMessage = handle_console_message
 
             widget.setUrl(qurl)
             widget.urlChanged.connect(lambda qurl, browser=widget: self.update_url_bar(qurl, browser))
