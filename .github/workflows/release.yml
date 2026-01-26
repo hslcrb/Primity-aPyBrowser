@@ -77,7 +77,7 @@ jobs:
         else
           SEP=":"
         fi
-        pyinstaller --noconfirm --onedir --windowed --name "PrimityBrowser" --add-data "README.md${SEP}." main.py
+        pyinstaller --noconfirm --onedir --windowed --name "PrimityBrowser" --add-data "README.md${SEP}." --add-data "assets${SEP}assets" main.py
 
     - name: Zip Artifacts (Linux/macOS)
       if: runner.os != 'Windows'

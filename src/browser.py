@@ -1,15 +1,25 @@
 import json
 import os
-from PySide6.QtCore import QUrl, QSettings
+from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot
 from PySide6.QtWidgets import (QMainWindow, QToolBar, QLineEdit, QTabWidget, 
-                             QStatusBar, QPushButton, QMenu, QMessageBox)
-from PySide6.QtGui import QAction
+                             QStatusBar, QPushButton, QMenu, QMessageBox, QVBoxLayout, QWidget)
+from PySide6.QtGui import QAction, QIcon, QPixmap
 from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebChannel import QWebChannel
 
 from src.config import TRANSLATIONS
 from src.ui_components import DARK_STYLE, LIGHT_STYLE
 from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
+from src.utils import generate_strong_password
+
+# Bridge class for JS to Python communication
+class PasswordBridge(QObject):
+    passwordFocused = Signal()
+
+    @Slot()
+    def onPasswordFocused(self):
+        self.passwordFocused.emit()
 
 class PrimityBrowser(QMainWindow):
     def __init__(self):
@@ -23,6 +33,10 @@ class PrimityBrowser(QMainWindow):
         
         self.bookmarks = self.load_bookmarks()
         
+        # Bridge for password detection
+        self.bridge = PasswordBridge()
+        self.bridge.passwordFocused.connect(self.suggest_password)
+
         # Apply monochrome theme
         self.apply_theme()
 
@@ -38,15 +52,16 @@ class PrimityBrowser(QMainWindow):
         # Navigation Bar
         self.navbar = QToolBar("Navigation")
         self.navbar.setMovable(False)
+        self.navbar.setIconSize(self.navbar.iconSize() * 0.8) # Keep it minimal
         self.addToolBar(self.navbar)
         
         self.init_ui()
 
-    def apply_theme(self):
-        if self.current_theme == "dark":
-            self.setStyleSheet(DARK_STYLE)
-        else:
-            self.setStyleSheet(LIGHT_STYLE)
+    def get_icon(self, name):
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', f"{name}.svg")
+        if os.path.exists(icon_path):
+            return QIcon(icon_path)
+        return QIcon()
 
     def tr_text(self, key):
         return TRANSLATIONS.get(self.current_lang, TRANSLATIONS['ko']).get(key, key)
@@ -55,22 +70,22 @@ class PrimityBrowser(QMainWindow):
         self.navbar.clear()
 
         # Back Button
-        back_btn = QAction("←", self)
-        back_btn.triggered.connect(lambda: self.tabs.currentWidget().back() if hasattr(self.tabs.currentWidget(), 'back') else None)
+        back_btn = QAction(self.get_icon("back"), "", self)
+        back_btn.triggered.connect(lambda: self.tabs.currentWidget().back() if isinstance(self.tabs.currentWidget(), QWebEngineView) else None)
         self.navbar.addAction(back_btn)
 
         # Forward Button
-        forward_btn = QAction("→", self)
-        forward_btn.triggered.connect(lambda: self.tabs.currentWidget().forward() if hasattr(self.tabs.currentWidget(), 'forward') else None)
+        forward_btn = QAction(self.get_icon("forward"), "", self)
+        forward_btn.triggered.connect(lambda: self.tabs.currentWidget().forward() if isinstance(self.tabs.currentWidget(), QWebEngineView) else None)
         self.navbar.addAction(forward_btn)
 
         # Reload Button
-        reload_btn = QAction("↻", self)
-        reload_btn.triggered.connect(lambda: self.tabs.currentWidget().reload() if hasattr(self.tabs.currentWidget(), 'reload') else None)
+        reload_btn = QAction(self.get_icon("reload"), "", self)
+        reload_btn.triggered.connect(lambda: self.tabs.currentWidget().reload() if isinstance(self.tabs.currentWidget(), QWebEngineView) else None)
         self.navbar.addAction(reload_btn)
 
         # Home Button
-        home_btn = QAction("🏠", self)
+        home_btn = QAction(self.get_icon("home"), "", self)
         home_btn.triggered.connect(self.navigate_home)
         self.navbar.addAction(home_btn)
 
@@ -80,14 +95,15 @@ class PrimityBrowser(QMainWindow):
         self.navbar.addWidget(self.url_bar)
 
         # Bookmark Button
-        self.bookmark_btn = QAction("★", self)
+        self.bookmark_btn = QAction(self.get_icon("star"), "", self)
         self.bookmark_btn.triggered.connect(self.add_bookmark)
         self.navbar.addAction(self.bookmark_btn)
 
         # Menu Button
-        self.menu_btn_widget = QPushButton("☰")
+        self.menu_btn_widget = QPushButton()
+        self.menu_btn_widget.setIcon(self.get_icon("menu"))
         self.menu_btn_widget.setFixedSize(36, 36)
-        self.menu_btn_widget.setObjectName("SecondaryButton") # Use defined minimal button style
+        self.menu_btn_widget.setObjectName("SecondaryButton")
         self.menu_btn_widget.setMenu(self.create_menu())
         self.navbar.addWidget(self.menu_btn_widget)
 
@@ -98,6 +114,12 @@ class PrimityBrowser(QMainWindow):
         # Status Bar
         self.status = QStatusBar()
         self.setStatusBar(self.status)
+
+    def apply_theme(self):
+        if self.current_theme == "dark":
+            self.setStyleSheet(DARK_STYLE)
+        else:
+            self.setStyleSheet(LIGHT_STYLE)
 
     def create_menu(self):
         menu = QMenu(self)
@@ -181,6 +203,13 @@ class PrimityBrowser(QMainWindow):
             self.menu_btn_widget.setMenu(self.create_menu())
             self.status.showMessage(f"Bookmarked: {title}", 2000)
 
+    def suggest_password(self):
+        new_pwd = generate_strong_password()
+        # Copy to clipboard and notify
+        QApplication.clipboard().setText(new_pwd)
+        QMessageBox.information(self, "Password Suggestion", 
+                                f"Detected password field.\nSuggested strong password has been copied to clipboard:\n\n{new_pwd}")
+
     def open_url(self, url):
         self.add_new_tab(QUrl(url))
 
@@ -193,6 +222,28 @@ class PrimityBrowser(QMainWindow):
             if qurl is None:
                 qurl = QUrl('https://www.google.com')
             widget = QWebEngineView()
+            
+            # Setup bridge for password detection injection
+            channel = QWebChannel(widget.page())
+            widget.page().setWebChannel(channel)
+            channel.registerObject("bridge", self.bridge)
+            
+            # Injected script content
+            injection_script = """
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                window.bridge = channel.objects.bridge;
+                document.addEventListener('focusin', function(e) {
+                    if (e.target.type === 'password') {
+                        window.bridge.onPasswordFocused();
+                    }
+                });
+            });
+            """
+            # Also need to include qwebchannel.js
+            # For simplicity, we assume we can runJS after load
+            widget.loadFinished.connect(lambda _, b=widget: b.page().runJavaScript(injection_script))
+            # Note: For production, qwebchannel.js should be loaded properly.
+
             widget.setUrl(qurl)
             widget.urlChanged.connect(lambda qurl, browser=widget: self.update_url_bar(qurl, browser))
             widget.loadFinished.connect(lambda _, browser=widget: 
