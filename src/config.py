@@ -25,7 +25,9 @@ TRANSLATIONS = {
         'Browser Name': 'Primity 프리마이티',
         'Korean Input': '한글 입력',
         'Keyboard Layout': '키보드 자판 설정',
-        'Dubeolshik': '두벌식 표준'
+        'Dubeolshik': '두벌식 표준',
+        'Sebeolshik 390': '세벌식 390',
+        'Sebeolshik Final': '세벌식 최종'
     },
     'en': {
         'Back': 'Back',
@@ -52,6 +54,8 @@ TRANSLATIONS = {
         'Browser Name': 'Primity',
         'Korean Input': 'Korean Input',
         'Keyboard Layout': 'Keyboard Layout',
-        'Dubeolshik': 'Dubeolshik (2-Set)'
+        'Dubeolshik': 'Dubeolshik (2-Set)',
+        'Sebeolshik 390': 'Sebeolshik 390',
+        'Sebeolshik Final': 'Sebeolshik Final'
     }
 }

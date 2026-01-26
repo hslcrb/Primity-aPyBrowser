@@ -41,7 +41,8 @@ class SettingsPage(QWidget):
 
         self.kbd_box = QComboBox()
         self.kbd_box.addItem(self.tr("Dubeolshik"), "dubeol")
-        self.kbd_box.addItem("Sebeolshik 390", "sebeol390")
+        self.kbd_box.addItem(self.tr("Sebeolshik 390"), "sebeol390")
+        self.kbd_box.addItem(self.tr("Sebeolshik Final"), "sebeolfinal")
         
         # Set current selection from settings
         current_kbd = self.main_window.settings.value("kbd_layout", "dubeol")

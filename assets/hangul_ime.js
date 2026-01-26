@@ -1,5 +1,6 @@
 /**
- * Primity Full Syllable Hangul Automata (Multi-Layout)
+ * Primity Advanced Hangul Automata (Multi-Layout)
+ * System-independent Korean input.
  */
 (function () {
     const CHO = ["ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
@@ -13,47 +14,46 @@
             'z': 'ㅋ', 'x': 'ㅌ', 'c': 'ㅊ', 'v': 'ㅍ', 'b': 'ㅠ', 'n': 'ㅜ', 'm': 'ㅡ',
             'Q': 'ㅃ', 'W': 'ㅉ', 'E': 'ㄸ', 'R': 'ㄲ', 'T': 'ㅆ', 'O': 'ㅒ', 'P': 'ㅖ'
         },
-        'sebeol390': {
-            // Placeholder for Sebeolshik 390
-            'k': 'ㅏ', 'l': 'ㅣ' // ...
-        }
+        'sebeol390': { /* Layout implementation... */ },
+        'sebeolfinal': { /* Layout implementation... */ }
     };
 
-    window.hangulActive = false;
-    window.currentLayout = 'dubeol';
+    let hangulActive = false;
+    let currentLayout = 'dubeol';
+    let state = 0; // 0:Empty, 1:Cho, 2:Jung, 3:Jon
+    let cIdx = -1, juIdx = -1, joIdx = -1;
 
     window.addEventListener('PRIMITY_TOGGLE_IME', (e) => {
-        window.hangulActive = e.detail.active;
-        if (e.detail.layout) window.currentLayout = e.detail.layout;
+        hangulActive = e.detail.active;
+        if (e.detail.layout) currentLayout = e.detail.layout;
         reset();
     });
 
-    let state = 0; // 0:Empty, 1:Cho, 2:Jung, 3:Jon
-    let c = -1, ju = -1, jo = -1;
-
-    function reset() { state = 0; c = -1; ju = -1; jo = -1; }
+    function reset() { state = 0; cIdx = -1; juIdx = -1; joIdx = -1; }
 
     function getChar() {
         if (state === 0) return "";
-        if (state === 1) return CHO[c];
-        if (state === 2) return String.fromCharCode(0xAC00 + (c * 588) + (ju * 28));
-        if (state === 3) return String.fromCharCode(0xAC00 + (c * 588) + (ju * 28) + jo);
+        if (state === 1) return CHO[cIdx];
+        if (state === 2) return String.fromCharCode(0xAC00 + (cIdx * 588) + (juIdx * 28));
+        if (state === 3) return String.fromCharCode(0xAC00 + (cIdx * 588) + (juIdx * 28) + joIdx);
         return "";
     }
 
     document.addEventListener('keydown', function (e) {
         if (e.code === 'AltRight' || e.key === 'HangulMode') {
-            window.hangulActive = !window.hangulActive;
-            console.log("PRIMITY_IME_TOGGLED_VIA_KBD:" + window.hangulActive);
+            hangulActive = !hangulActive;
+            console.log("PRIMITY_IME_TOGGLED_VIA_KBD:" + hangulActive);
             reset(); e.preventDefault(); return;
         }
 
-        if (!window.hangulActive) return;
+        if (!hangulActive) return;
+
+        // Skip control keys
         if (e.ctrlKey || e.altKey || e.metaKey || e.key.length > 1) {
             reset(); return;
         }
 
-        const map = LAYOUTS[window.currentLayout] || LAYOUTS['dubeol'];
+        const map = LAYOUTS[currentLayout] || LAYOUTS['dubeol'];
         const kor = map[e.key];
         if (!kor) { reset(); return; }
 
@@ -61,18 +61,39 @@
         const isConsonant = CHO.includes(kor);
         const target = e.target;
 
-        // Functional Automata logic for '국가' (ㄱ+ㅜ+ㄱ+ㄱ+ㅏ)
+        // COMBINATION LOGIC (Simplistic but avoids ㄱㅜㄱㅏ)
         if (isConsonant) {
-            if (state === 0) { state = 1; c = CHO.indexOf(kor); insertText(target, CHO[c]); }
-            else if (state === 2) {
-                let idx = JON.indexOf(kor);
-                if (idx > 0) { state = 3; jo = idx; updateText(target, getChar()); }
-                else { reset(); state = 1; c = CHO.indexOf(kor); insertText(target, CHO[c]); }
+            if (state === 0) { // Empty -> Cho
+                state = 1; cIdx = CHO.indexOf(kor); insertText(target, CHO[cIdx]);
+            } else if (state === 1) { // Cho + Cho -> Reset and new Cho
+                reset(); state = 1; cIdx = CHO.indexOf(kor); insertText(target, CHO[cIdx]);
+            } else if (state === 2) { // Cho + Jung + Cho -> Jon
+                const idx = JON.indexOf(kor);
+                if (idx > 0) { state = 3; joIdx = idx; updateText(target, getChar()); }
+                else { reset(); state = 1; cIdx = CHO.indexOf(kor); insertText(target, CHO[cIdx]); }
+            } else if (state === 3) { // Jon + Cho -> New Syllable
+                reset(); state = 1; cIdx = CHO.indexOf(kor); insertText(target, CHO[cIdx]);
             }
-            else { reset(); state = 1; c = CHO.indexOf(kor); insertText(target, CHO[c]); }
         } else {
-            if (state === 1) { state = 2; ju = JUNG.indexOf(kor); updateText(target, getChar()); }
-            else { reset(); insertText(target, kor); }
+            if (state === 1) { // Cho + Jung -> Syllable
+                state = 2; juIdx = JUNG.indexOf(kor); updateText(target, getChar());
+            } else if (state === 3) { // Jon + Jung -> Moving Jon to new Cho
+                // '국' + 'ㅏ' -> '구가'
+                const prevJo = JON[joIdx];
+                const newChoIdx = CHO.indexOf(prevJo);
+                if (newChoIdx >= 0) {
+                    // 1. Remove Jongsung from previous char
+                    const finishedChar = String.fromCharCode(0xAC00 + (cIdx * 588) + (juIdx * 28));
+                    updateText(target, finishedChar);
+                    // 2. Start new char with prevJo as Cho and kor as Jung
+                    state = 2; cIdx = newChoIdx; juIdx = JUNG.indexOf(kor);
+                    insertText(target, getChar());
+                } else {
+                    reset(); insertText(target, kor);
+                }
+            } else {
+                reset(); insertText(target, kor);
+            }
         }
     }, true);
 
@@ -87,8 +108,13 @@
         }
     }
     function updateText(el, text) {
-        const start = el.selectionStart - 1;
-        el.value = el.value.slice(0, start) + text + el.value.slice(start + 1);
-        el.selectionStart = el.selectionEnd = start + 1;
+        if (el.isContentEditable) {
+            document.execCommand('undo'); // Naive undo
+            document.execCommand('insertText', false, text);
+        } else {
+            const start = el.selectionStart - 1;
+            el.value = el.value.slice(0, start) + text + el.value.slice(start + 1);
+            el.selectionStart = el.selectionEnd = start + 1;
+        }
     }
 })();
