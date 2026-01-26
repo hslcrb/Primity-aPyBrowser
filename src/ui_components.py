@@ -14,8 +14,10 @@ DARK_VARS = {
     "--border": "#222222",
     "--hover": "#222222",
     "--input-bg": "#111111",
+    "--tab-bg": "#1a1a1a", # Dark gray for tabs in dark mode
+    "--tab-selected-bg": "#2a2a2a",
     "--close-bg": "#ffffff",
-    "--close-hover": "#ff5f56", # Slight red on hover for close
+    "--close-hover": "#ff5f56",
     "--danger": "#e81123"
 }
 
@@ -27,6 +29,8 @@ LIGHT_VARS = {
     "--border": "#eeeeee",
     "--hover": "#eeeeee",
     "--input-bg": "#ffffff",
+    "--tab-bg": "#f0f0f0", # Light gray for tabs in light mode
+    "--tab-selected-bg": "#ffffff",
     "--close-bg": "#000000",
     "--close-hover": "#e81123",
     "--danger": "#e81123"
@@ -70,17 +74,17 @@ QTabBar {
     border: none;
 }
 QTabBar::tab {
-    background: var(--bg);
+    background: var(--tab-bg);
     color: var(--gray);
-    padding: 4px 12px;
-    border: 1px solid var(--border);
+    padding: 6px 15px;
+    border: 1px solid var(--dark-gray);
     border-bottom: none;
     margin-right: 1px;
     font-size: 11px;
     min-width: 80px;
 }
 QTabBar::tab:selected {
-    background: var(--input-bg);
+    background: var(--tab-selected-bg);
     color: var(--fg);
     border-top: 2px solid var(--fg);
     border-left: 1px solid var(--border);

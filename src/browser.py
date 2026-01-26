@@ -343,9 +343,17 @@ class PrimityBrowser(QMainWindow):
                                          self.tabs.setTabText(self.tabs.indexOf(browser), browser.title()))
             widget.titleChanged.connect(lambda title, browser=widget:
                                          self.tabs.setTabText(self.tabs.indexOf(browser), title))
-
+            
+            # Favicon Support
+            widget.iconChanged.connect(lambda icon, browser=widget:
+                                       self.tabs.setTabIcon(self.tabs.indexOf(browser), icon))
+            
         i = self.tabs.addTab(widget, label)
         self.tabs.setCurrentIndex(i)
+
+        # Set default icon for web pages if newly created
+        if isinstance(widget, QWebEngineView):
+            self.tabs.setTabIcon(i, self.get_icon("globe"))
 
     def tab_open_doubleclick(self, i):
         if i == -1:
