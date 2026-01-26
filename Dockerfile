@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 # Install system dependencies required for QtWebEngine
 ARG DEBIAN_FRONTEND=noninteractive
