@@ -66,16 +66,7 @@ class PrimityBrowser(QMainWindow):
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
         self.tabs.tabBar().setExpanding(False) # Keep tabs to the left
 
-        # New Tab Button (Inline, after last tab)
-        self.add_tab_btn = QPushButton()
-        self.add_tab_btn.setIcon(self.get_icon("plus"))
-        self.add_tab_btn.setFixedSize(32, 28)
-        self.add_tab_btn.setCursor(Qt.PointingHandCursor)
-        self.add_tab_btn.setObjectName("PrimaryButton")
-        self.add_tab_btn.setStyleSheet("border: none; background: transparent;")
-        self.add_tab_btn.clicked.connect(lambda: self.add_new_tab())
-
-        # --- Tabs Layout (Tabs -> Plus -> Stretch) ---
+        # --- Tabs Layout ---
         self.tabs_container = QWidget()
         self.tabs_container.setObjectName("TabsContainer")
         self.tabs_layout = QHBoxLayout(self.tabs_container)
@@ -83,8 +74,7 @@ class PrimityBrowser(QMainWindow):
         self.tabs_layout.setSpacing(0)
 
         self.tabs_layout.addWidget(self.tabs)
-        self.tabs_layout.addWidget(self.add_tab_btn)
-        self.tabs_layout.addStretch() # Pushes tabs and plus button to the LEFT
+        self.tabs_layout.addStretch() # Ensure tabs are aligned to the left
         
         self.main_layout.addWidget(self.tabs_container)
 
