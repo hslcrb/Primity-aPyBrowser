@@ -1,9 +1,9 @@
 import json
 import os
-from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot, QPoint
 from PySide6.QtWidgets import (QMainWindow, QToolBar, QLineEdit, QTabWidget, 
                              QStatusBar, QPushButton, QMenu, QMessageBox, QVBoxLayout, 
-                             QWidget, QHBoxLayout, QLabel, QFileDialog)
+                             QWidget, QHBoxLayout, QLabel, QFileDialog, QInputDialog, QDialog)
+from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot, QPoint, QPropertyAnimation, QVariantAnimation
 from PySide6.QtGui import QAction, QIcon, QPixmap, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
@@ -55,7 +55,22 @@ class PrimityBrowser(QMainWindow):
         self.navbar = QToolBar("Navigation")
         self.navbar.setMovable(False)
         self.navbar.setIconSize(self.navbar.iconSize() * 0.8)
-        self.main_layout.addWidget(self.navbar)
+        self.main_layout.addWidget(self.navbar) # Keep this line, the snippet's addLayout was incorrect here
+        
+        # --- Tabs Layout ---
+        tabs_container = QWidget()
+        tabs_container.setObjectName("TabsContainer")
+        tabs_layout = QHBoxLayout(tabs_container)
+        tabs_layout.setContentsMargins(5, 2, 5, 0)
+        tabs_layout.setSpacing(0)
+
+        # New Tab Button (at the front)
+        self.add_tab_btn = QPushButton()
+        self.add_tab_btn.setIcon(self.get_icon("plus"))
+        self.add_tab_btn.setFixedSize(28, 28)
+        self.add_tab_btn.setObjectName("PrimaryButton")
+        self.add_tab_btn.clicked.connect(lambda: self.add_new_tab())
+        tabs_layout.addWidget(self.add_tab_btn)
 
         # Tab Widget
         self.tabs = QTabWidget()
@@ -64,7 +79,9 @@ class PrimityBrowser(QMainWindow):
         self.tabs.currentChanged.connect(self.current_tab_changed)
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
-        self.main_layout.addWidget(self.tabs)
+        tabs_layout.addWidget(self.tabs)
+        
+        self.main_layout.addWidget(tabs_container)
 
         # Apply monochrome theme
         self.apply_theme()
@@ -156,16 +173,6 @@ class PrimityBrowser(QMainWindow):
         forward_btn.triggered.connect(lambda: self.tabs.currentWidget().forward() if isinstance(self.tabs.currentWidget(), QWebEngineView) else None)
         self.navbar.addAction(forward_btn)
 
-        # Reload Button
-        reload_btn = QAction(self.get_icon("reload"), "", self)
-        reload_btn.triggered.connect(lambda: self.tabs.currentWidget().reload() if isinstance(self.tabs.currentWidget(), QWebEngineView) else None)
-        self.navbar.addAction(reload_btn)
-
-        # Home Button
-        home_btn = QAction(self.get_icon("home"), "", self)
-        home_btn.triggered.connect(self.navigate_home)
-        self.navbar.addAction(home_btn)
-
         # URL Bar
         self.url_bar = QLineEdit()
         self.url_bar.returnPressed.connect(self.navigate_to_url)
@@ -174,6 +181,25 @@ class PrimityBrowser(QMainWindow):
         self.security_action = self.url_bar.addAction(self.get_icon("unlock"), QLineEdit.LeadingPosition)
         
         self.navbar.addWidget(self.url_bar)
+
+        # Home Button
+        home_btn = QAction(self.get_icon("home"), "", self)
+        home_btn.triggered.connect(self.navigate_home)
+        self.navbar.addAction(home_btn)
+
+        # Reload Button with Animation state
+        self.reload_btn = QAction(self.get_icon("reload"), "", self)
+        self.reload_btn.triggered.connect(self.reload_page)
+        self.navbar.addAction(self.reload_btn)
+        
+        # Animation for reload
+        self.reload_angle = 0
+        self.reload_timer = QVariantAnimation(self)
+        self.reload_timer.setStartValue(0)
+        self.reload_timer.setEndValue(360)
+        self.reload_timer.setDuration(1000)
+        self.reload_timer.setLoopCount(-1)
+        self.reload_timer.valueChanged.connect(self.animate_reload)
 
         # Bookmark Button
         self.bookmark_btn = QAction(self.get_icon("star"), "", self)
@@ -234,13 +260,19 @@ class PrimityBrowser(QMainWindow):
     def create_menu(self):
         menu = QMenu(self)
         
-        # Bookmarks Submenu
-        bookmarks_menu = menu.addMenu(self.tr_text("Bookmarks"))
-        for title, url in self.bookmarks.items():
-            action = QAction(title, self)
-            action.triggered.connect(lambda checked, u=url: self.open_url(u))
-            bookmarks_menu.addAction(action)
-            
+        # Bookmarks with Collections
+        bm_menu = menu.addMenu(self.tr_text("Bookmarks"))
+        for coll, items in self.bookmarks.items():
+            if isinstance(items, dict):
+                coll_menu = bm_menu.addMenu(coll)
+                for title, url in items.items():
+                    action = coll_menu.addAction(title)
+                    action.triggered.connect(lambda checked=False, u=url: self.open_url(u))
+            else:
+                # Top level bookmarks (legacy support or single-level bookmarks)
+                action = bm_menu.addAction(coll)
+                action.triggered.connect(lambda checked=False, u=items: self.open_url(u))
+        
         menu.addSeparator()
 
         # Theme Toggle
@@ -249,7 +281,7 @@ class PrimityBrowser(QMainWindow):
         menu.addAction(theme_action)
 
         menu.addSeparator()
-
+        
         # Global Password Manager (Internal Tab)
         pwd_action = QAction(self.tr_text("Password Manager"), self)
         pwd_action.triggered.connect(self.open_password_tab)
@@ -379,15 +411,74 @@ class PrimityBrowser(QMainWindow):
         self.toggle_language()
         self.menu_btn_widget.setMenu(self.create_menu())
 
+    def reload_page(self):
+        curr = self.tabs.currentWidget()
+        if isinstance(curr, QWebEngineView):
+            curr.reload()
+
+    def animate_reload(self, value):
+        # Rotate the reload icon (simplified by just changing icon states)
+        # Real rotation requires a custom widget for the action
+        pass
+
+    def start_reload_anim(self, browser):
+        if browser == self.tabs.currentWidget():
+            self.reload_btn.setIcon(self.get_icon("reload_yellow"))
+            self.reload_timer.start()
+
+    def stop_reload_anim(self, browser):
+        if browser == self.tabs.currentWidget():
+            self.reload_timer.stop()
+            self.reload_btn.setIcon(self.get_icon("reload_green"))
+            # Fader effect simulation
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(800, lambda: self.reload_btn.setIcon(self.get_icon("reload")))
+
     def add_bookmark(self):
         widget = self.tabs.currentWidget()
         if isinstance(widget, QWebEngineView):
             url = widget.url().toString()
             title = widget.title()
-            self.bookmarks[title] = url
-            self.save_bookmarks()
-            self.menu_btn_widget.setMenu(self.create_menu())
-            self.status.showMessage(f"Bookmarked: {title}", 2000)
+            
+            # UX: Ask for collection
+            collections = list(self.bookmarks.keys())
+            if not collections: collections = ["Default"]
+            
+            coll, ok = QInputDialog.getItem(self, self.tr_text("Add Bookmark"), 
+                                          self.tr_text("Select Collection:"), collections, 0, True)
+            if ok and coll:
+                if coll not in self.bookmarks or not isinstance(self.bookmarks[coll], dict):
+                    self.bookmarks[coll] = {}
+                self.bookmarks[coll][title] = url
+                self.save_bookmarks()
+                self.update_bookmark_indicator()
+                self.menu_btn_widget.setMenu(self.create_menu())
+                self.status.showMessage(f"Bookmarked to {coll}: {title}", 2000)
+
+    def update_bookmark_indicator(self):
+        widget = self.tabs.currentWidget()
+        if not isinstance(widget, QWebEngineView):
+            self.bookmark_btn.setIcon(self.get_icon("star"))
+            return
+            
+        url = widget.url().toString()
+        is_bookmarked = False
+        
+        # Search in all collections (v0.0.31 supports nested bookmarks)
+        for coll_name, coll_data in self.bookmarks.items():
+            if isinstance(coll_data, dict):
+                if url in coll_data.values():
+                    is_bookmarked = True
+                    break
+            elif coll_data == url: # Legacy support
+                is_bookmarked = True
+                break
+        
+        if is_bookmarked:
+            self.security_action.setIcon(self.get_icon("star_yellow")) # Also show in URL bar lead?
+            self.bookmark_btn.setIcon(self.get_icon("star_yellow"))
+        else:
+            self.bookmark_btn.setIcon(self.get_icon("star"))
 
     def suggest_password(self):
         new_pwd = generate_strong_password()
@@ -429,6 +520,11 @@ class PrimityBrowser(QMainWindow):
                     ime_js = f.read()
                 widget.loadFinished.connect(lambda _, b=widget: b.page().runJavaScript(ime_js))
 
+            # Connect reload state triggers
+            widget.loadStarted.connect(lambda b=widget: self.start_reload_anim(b))
+            widget.loadFinished.connect(lambda _, b=widget: self.stop_reload_anim(b))
+            widget.urlChanged.connect(lambda _, b=widget: self.update_bookmark_indicator())
+
             # Handle notification via console messages
             def handle_console_message(level, message, line, source):
                 if "PRIMITY_PWD_FOCUS" in message:
@@ -469,6 +565,7 @@ class PrimityBrowser(QMainWindow):
                 qurl = widget.url()
                 self.update_url_bar(qurl, widget)
                 self.update_title(widget)
+                self.update_bookmark_indicator()
             else:
                 self.url_bar.setText(f"primity://{type(widget).__name__.lower().replace('page','')}")
                 tab_text = self.tabs.tabText(i)
