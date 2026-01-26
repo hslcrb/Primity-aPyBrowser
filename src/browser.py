@@ -249,11 +249,13 @@ class PrimityBrowser(QMainWindow):
     def toggle_language(self):
         self.current_lang = 'en' if self.current_lang == 'ko' else 'ko'
         self.settings.setValue("language", self.current_lang)
+        
+        # Re-initialize UI elements that use translations
         self.init_ui() 
         self.menu_btn_widget.setMenu(self.create_menu())
-        # Update title bar label
         self.title_label.setText(self.tr_text("Browser Name"))
-        # If settings tab is open, update it
+
+        # Update all internal tabs and re-translate browser tab titles
         for i in range(self.tabs.count()):
             widget = self.tabs.widget(i)
             if isinstance(widget, SettingsPage):
@@ -261,7 +263,15 @@ class PrimityBrowser(QMainWindow):
                 self.tabs.removeTab(i)
                 self.tabs.insertTab(i, new_settings, self.tr_text("Settings"))
                 self.tabs.setCurrentIndex(i)
-                break
+            elif isinstance(widget, PasswordPage):
+                new_pwd = PasswordPage(self, self.current_lang)
+                self.tabs.removeTab(i)
+                self.tabs.insertTab(i, new_pwd, self.tr_text("Password Manager"))
+                self.tabs.setCurrentIndex(i)
+            elif isinstance(widget, QWebEngineView):
+                # If it's the home page, we might want to update its tab text if it was 'Home'
+                if self.tabs.tabText(i) in [TRANSLATIONS['ko']['Home'], TRANSLATIONS['en']['Home']]:
+                    self.tabs.setTabText(i, self.tr_text('Home'))
 
     def load_bookmarks(self):
         try:
@@ -373,9 +383,19 @@ class PrimityBrowser(QMainWindow):
             self.add_new_tab(QUrl("https://www.google.com"), "Home")
 
     def navigate_to_url(self):
-        q = QUrl(self.url_bar.text())
-        if q.scheme() == "":
-            q.setScheme("http")
+        text = self.url_bar.text().strip()
+        if not text:
+            return
+            
+        # Smart URL vs Search detection
+        if "." not in text or " " in text:
+            # Likely a search query
+            q = QUrl(f"https://www.google.com/search?q={text}")
+        else:
+            q = QUrl(text)
+            if not q.scheme():
+                q.setScheme("https") # Default to https for direct URLs
+        
         curr = self.tabs.currentWidget()
         if isinstance(curr, QWebEngineView):
             curr.setUrl(q)
