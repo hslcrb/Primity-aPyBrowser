@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QComboBox
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, 
+                             QComboBox, QLineEdit, QHBoxLayout, QScrollArea)
 from src.config import TRANSLATIONS
 from src.ui_components import MinimalCard
 
@@ -13,48 +14,97 @@ class SettingsPage(QWidget):
         return TRANSLATIONS.get(self.lang, TRANSLATIONS['ko']).get(key, key)
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(50, 50, 50, 50)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(50, 20, 50, 50)
         
-        card = MinimalCard()
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(30, 30, 30, 30)
+        # Scroll Area for many settings
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("background: transparent; border: none;")
         
-        title = QLabel(self.tr('App Settings'))
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: white; margin-bottom: 20px;")
-        card_layout.addWidget(title)
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(20)
         
-        # Language Section
+        # --- GENERAL SETTINGS ---
+        gen_card = MinimalCard()
+        gen_layout = QVBoxLayout(gen_card)
+        gen_layout.setContentsMargins(30, 30, 30, 30)
+        
+        gen_title = QLabel(self.tr('General Settings'))
+        gen_title.setStyleSheet("font-size: 20px; font-weight: bold; color: white; margin-bottom:  profile10px;")
+        gen_layout.addWidget(gen_title)
+        
+        # Home Page URL
+        hp_label = QLabel(self.tr('Home Page'))
+        hp_label.setStyleSheet("color: #888; font-size: 13px; margin-top: 10px;")
+        gen_layout.addWidget(hp_label)
+        
+        self.home_page_edit = QLineEdit()
+        self.home_page_edit.setText(self.main_window.settings.value("home_url", "https://www.google.com"))
+        self.home_page_edit.textChanged.connect(self.save_home_url)
+        gen_layout.addWidget(self.home_page_edit)
+        
+        # Language
         lang_label = QLabel(self.tr('Language'))
-        lang_label.setStyleSheet("color: #ccc; font-size: 14px; margin-top: 10px;")
-        card_layout.addWidget(lang_label)
+        lang_label.setStyleSheet("color: #888; font-size: 13px; margin-top: 10px;")
+        gen_layout.addWidget(lang_label)
         
         lang_btn = QPushButton(f"Language: {self.lang.upper()}")
         lang_btn.setObjectName("SecondaryButton")
         lang_btn.clicked.connect(self.main_window.toggle_language)
-        card_layout.addWidget(lang_btn)
-
-        # Keyboard Layout Section
+        gen_layout.addWidget(lang_btn)
+        
+        layout.addWidget(gen_card)
+        
+        # --- KEYBOARD SETTINGS ---
+        kbd_card = MinimalCard()
+        kbd_layout = QVBoxLayout(kbd_card)
+        kbd_layout.setContentsMargins(30, 30, 30, 30)
+        
+        kbd_title = QLabel(self.tr('Keyboard Settings'))
+        kbd_title.setStyleSheet("font-size: 20px; font-weight: bold; color: white; margin-bottom: 10px;")
+        kbd_layout.addWidget(kbd_title)
+        
+        # Kbd Layout
         kbd_label = QLabel(self.tr('Keyboard Layout'))
-        kbd_label.setStyleSheet("color: #ccc; font-size: 14px; margin-top: 20px;")
-        card_layout.addWidget(kbd_label)
+        kbd_label.setStyleSheet("color: #888; font-size: 13px; margin-top: 10px;")
+        kbd_layout.addWidget(kbd_label)
 
         self.kbd_box = QComboBox()
         self.kbd_box.addItem(self.tr("Dubeolshik"), "dubeol")
         self.kbd_box.addItem(self.tr("Sebeolshik 390"), "sebeol390")
         self.kbd_box.addItem(self.tr("Sebeolshik Final"), "sebeolfinal")
+        self.kbd_box.addItem(self.tr("English"), "english")
         
-        # Set current selection from settings
         current_kbd = self.main_window.settings.value("kbd_layout", "dubeol")
         index = self.kbd_box.findData(current_kbd)
-        if index >= 0:
-            self.kbd_box.setCurrentIndex(index)
+        if index >= 0: self.kbd_box.setCurrentIndex(index)
             
         self.kbd_box.currentIndexChanged.connect(self.kbd_changed)
-        card_layout.addWidget(self.kbd_box)
+        kbd_layout.addWidget(self.kbd_box)
         
-        card_layout.addStretch()
-        layout.addWidget(card)
+        layout.addWidget(kbd_card)
+        
+        # --- SYSTEM ---
+        sys_card = MinimalCard()
+        sys_layout = QVBoxLayout(sys_card)
+        sys_layout.setContentsMargins(30, 30, 30, 30)
+        
+        reset_btn = QPushButton(self.tr('Reset to Defaults'))
+        reset_btn.setObjectName("DangerButton")
+        reset_btn.clicked.connect(self.main_window.reset_settings)
+        sys_layout.addWidget(reset_btn)
+        
+        layout.addWidget(sys_card)
+        
+        layout.addStretch()
+        scroll.setWidget(container)
+        main_layout.addWidget(scroll)
+
+    def save_home_url(self, text):
+        self.main_window.settings.setValue("home_url", text)
 
     def kbd_changed(self, index):
         layout_id = self.kbd_box.itemData(index)

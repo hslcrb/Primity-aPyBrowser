@@ -27,7 +27,14 @@ TRANSLATIONS = {
         'Keyboard Layout': '키보드 자판 설정',
         'Dubeolshik': '두벌식 표준',
         'Sebeolshik 390': '세벌식 390',
-        'Sebeolshik Final': '세벌식 최종'
+        'Sebeolshik Final': '세벌식 최종',
+        'English': '영어 (QWERTY)',
+        'Reset to Defaults': '기본값으로 초기화',
+        'Home Page': '홈페이지 주소',
+        'General Settings': '일반 설정',
+        'Keyboard Settings': '키보드 및 입력 설정',
+        'Confirm Reset': '초기화 확인',
+        'Are you sure you want to reset all settings to defaults?': '모든 설정을 초기 상태로 되돌리시겠습니까?'
     },
     'en': {
         'Back': 'Back',
@@ -56,6 +63,13 @@ TRANSLATIONS = {
         'Keyboard Layout': 'Keyboard Layout',
         'Dubeolshik': 'Dubeolshik (2-Set)',
         'Sebeolshik 390': 'Sebeolshik 390',
-        'Sebeolshik Final': 'Sebeolshik Final'
+        'Sebeolshik Final': 'Sebeolshik Final',
+        'English': 'English (QWERTY)',
+        'Reset to Defaults': 'Reset to Defaults',
+        'Home Page': 'Home Page URL',
+        'General Settings': 'General Settings',
+        'Keyboard Settings': 'Keyboard Settings',
+        'Confirm Reset': 'Confirm Reset',
+        'Are you sure you want to reset all settings to defaults?': 'Are you sure you want to reset all settings to defaults?'
     }
 }

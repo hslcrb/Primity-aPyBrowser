@@ -13,6 +13,14 @@ from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
 from src.utils import generate_strong_password
 
+# Default System Config
+DEFAULT_SETTINGS = {
+    "language": "ko",
+    "theme": "dark",
+    "home_url": "https://www.google.com",
+    "kbd_layout": "dubeol"
+}
+
 class PrimityBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -257,6 +265,26 @@ class PrimityBrowser(QMainWindow):
         # Refresh menu to update text
         self.menu_btn_widget.setMenu(self.create_menu())
 
+    def reset_settings(self):
+        reply = QMessageBox.question(self, self.tr_text("Confirm Reset"), 
+                                   self.tr_text("Are you sure you want to reset all settings to defaults?"),
+                                   QMessageBox.Yes | QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            # Revert to defaults
+            for key, val in DEFAULT_SETTINGS.items():
+                self.settings.setValue(key, val)
+            
+            # Re-sync current instance
+            self.current_lang = DEFAULT_SETTINGS['language']
+            self.current_theme = DEFAULT_SETTINGS['theme']
+            self.kor_input_active = False # Reset IME toggle too
+            
+            # Apply Changes
+            self.apply_theme()
+            self.toggle_language() # This re-inits UI and internal tabs
+            self.status.showMessage("Settings Reset to Defaults", 3000)
+
     def open_password_tab(self):
         self.add_new_tab(internal="passwords", label=self.tr_text("Password Manager"))
 
@@ -416,11 +444,12 @@ class PrimityBrowser(QMainWindow):
             self.title_label.setText(self.tr_text('Browser Name'))
 
     def navigate_home(self):
+        home = self.settings.value("home_url", "https://www.google.com")
         curr = self.tabs.currentWidget()
         if isinstance(curr, QWebEngineView):
-            curr.setUrl(QUrl("https://www.google.com"))
+            curr.setUrl(QUrl(home))
         else:
-            self.add_new_tab(QUrl("https://www.google.com"), "Home")
+            self.add_new_tab(QUrl(home), "Home")
 
     def navigate_to_url(self):
         text = self.url_bar.text().strip()
