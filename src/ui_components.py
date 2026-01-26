@@ -42,15 +42,15 @@ QLineEdit {
 }
 QToolButton {
     background: transparent;
-    color: #ffffff;
     border: none;
-    padding: 4px;
+    padding: 6px;
+    margin: 1px;
 }
 QToolButton:hover {
-    background: #333333;
+    background: #222222;
 }
 QToolButton:pressed {
-    background: #555555;
+    background: #333333;
 }
 QStatusBar {
     background: #000000;
@@ -78,13 +78,13 @@ QMenu::item:selected {
 #PrimaryButton, #SecondaryButton, #DangerButton {
     background: #000000;
     color: #ffffff;
-    border: 1px solid #ffffff;
+    border: 1px solid #333333;
     padding: 8px 15px;
     border-radius: 0px;
 }
 #PrimaryButton:hover, #SecondaryButton:hover, #DangerButton:hover {
-    background: #ffffff;
-    color: #000000;
+    background: #222222;
+    border: 1px solid #aaaaaa;
 }
 QLabel {
     color: #ffffff;
@@ -128,9 +128,9 @@ QLineEdit {
 }
 QToolButton {
     background: transparent;
-    color: #000000;
     border: none;
-    padding: 4px;
+    padding: 6px;
+    margin: 1px;
 }
 QToolButton:hover {
     background: #eeeeee;
@@ -164,13 +164,13 @@ QMenu::item:selected {
 #PrimaryButton, #SecondaryButton, #DangerButton {
     background: #ffffff;
     color: #000000;
-    border: 1px solid #000000;
+    border: 1px solid #dddddd;
     padding: 8px 15px;
     border-radius: 0px;
 }
 #PrimaryButton:hover, #SecondaryButton:hover, #DangerButton:hover {
-    background: #000000;
-    color: #ffffff;
+    background: #f0f0f0;
+    border: 1px solid #555555;
 }
 QLabel {
     color: #000000;
