@@ -1,38 +1,54 @@
 import sys
 import os
 
-# Set environment variables for Korean IME (fcitx) support on Linux
-# We try to ensure Qt and Chromium both see the same input method
-os.environ["QT_IM_MODULE"] = "fcitx"
-os.environ["GTK_IM_MODULE"] = "fcitx"
-os.environ["XMODIFIERS"] = "@im=fcitx"
-os.environ["QT4_IM_MODULE"] = "fcitx"
-os.environ["CLUTTER_IM_MODULE"] = "fcitx"
+# 1. 포괄적인 IME 환경 변수 설정 (fcitx 최우선)
+env_vars = {
+    "QT_IM_MODULE": "fcitx",
+    "GTK_IM_MODULE": "fcitx",
+    "XMODIFIERS": "@im=fcitx",
+    "QT4_IM_MODULE": "fcitx",
+    "CLUTTER_IM_MODULE": "fcitx",
+    "QT_QPA_PLATFORM": "xcb",      # X11 환경 강제
+    "SDL_IM_MODULE": "fcitx",
+    "GLFW_IM_MODULE": "ibus"       # ibus 호환성 필요한 경우 대비
+}
+for key, value in env_vars.items():
+    os.environ[key] = value
 
-# Force X11 backend for reliability on Linux
-os.environ["QT_QPA_PLATFORM"] = "xcb"
+# 2. 시스템 Qt 플러그인 경로 탐색 및 추가 (가상환경 IME 미작동 방지)
+plugin_paths = [
+    "/usr/lib/x86_64-linux-gnu/qt6/plugins",
+    "/usr/lib/qt6/plugins",
+    "/usr/lib64/qt6/plugins"
+]
+for path in plugin_paths:
+    if os.path.exists(path):
+        current = os.environ.get("QT_PLUGIN_PATH", "")
+        os.environ["QT_PLUGIN_PATH"] = f"{path}:{current}" if current else path
+        break
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from src.browser import PrimityBrowser
 
 def main():
-    # Attempt to fix IME issues on Linux (Native windows often help with IME composition)
-    QApplication.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings, True)
+    # 3. 네이티브 이벤트 핸들링 최적화
+    # DontCreateNativeWidgetSiblings를 False로 하여 네이티브 윈도우와의 통신 복구
+    QApplication.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings, False)
     QApplication.setAttribute(Qt.AA_NativeWindows, True)
-
-    # Some Chromium flags that help with IME/Input on Linux
-    sys.argv.append("--disable-features=UseOzonePlatform")
-    sys.argv.append("--ignore-gpu-blocklist")
-    sys.argv.append("--enable-threaded-compositing")
+    
+    # 4. Chromium 입력 관련 플래그 최적화
+    sys.argv.append("--ozone-platform=x11")
+    sys.argv.append("--enable-wayland-ime") # 혹시 모를 내부 레이어 대비
+    sys.argv.append("--gtk-version=3")
     
     app = QApplication(sys.argv)
     app.setApplicationName("Primity")
     
-    # Point to system Qt6 plugins to enable fcitx input context in virtual environment
-    system_plugin_path = "/usr/lib/x86_64-linux-gnu/qt6/plugins"
-    if os.path.exists(system_plugin_path):
-        app.addLibraryPath(system_plugin_path)
+    # Library Path에도 시스템 경로 추가
+    for path in plugin_paths:
+        if os.path.exists(path):
+            app.addLibraryPath(path)
     
     window = PrimityBrowser()
     window.show()
