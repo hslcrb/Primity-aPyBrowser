@@ -87,6 +87,30 @@ class SettingsPage(QWidget):
         
         layout.addWidget(kbd_card)
         
+        # --- DATA MANAGEMENT ---
+        data_card = MinimalCard()
+        data_layout = QVBoxLayout(data_card)
+        data_layout.setContentsMargins(30, 30, 30, 30)
+        
+        data_title = QLabel(self.tr("Data Management"))
+        data_title.setStyleSheet("font-size: 20px; font-weight: bold; color: white; margin-bottom: 10px;")
+        data_layout.addWidget(data_title)
+        
+        btn_layout = QHBoxLayout()
+        export_btn = QPushButton(self.tr('Export Browser Data'))
+        export_btn.setObjectName("SecondaryButton")
+        export_btn.clicked.connect(self.main_window.export_data)
+        
+        import_btn = QPushButton(self.tr('Import Browser Data'))
+        import_btn.setObjectName("SecondaryButton")
+        import_btn.clicked.connect(self.main_window.import_data)
+        
+        btn_layout.addWidget(export_btn)
+        btn_layout.addWidget(import_btn)
+        data_layout.addLayout(btn_layout)
+        
+        layout.addWidget(data_card)
+        
         # --- SYSTEM ---
         sys_card = MinimalCard()
         sys_layout = QVBoxLayout(sys_card)

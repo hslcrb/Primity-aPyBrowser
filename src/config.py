@@ -34,7 +34,10 @@ TRANSLATIONS = {
         'General Settings': '일반 설정',
         'Keyboard Settings': '키보드 및 입력 설정',
         'Confirm Reset': '초기화 확인',
-        'Are you sure you want to reset all settings to defaults?': '모든 설정을 초기 상태로 되돌리시겠습니까?'
+        'Are you sure you want to reset all settings to defaults?': '모든 설정을 초기 상태로 되돌리시겠습니까?',
+        'Export Browser Data': '브라우저 데이터 내보내기',
+        'Import Browser Data': '브라우저 데이터 가져오기',
+        'Data Management': '데이터 관리'
     },
     'en': {
         'Back': 'Back',
@@ -70,6 +73,9 @@ TRANSLATIONS = {
         'General Settings': 'General Settings',
         'Keyboard Settings': 'Keyboard Settings',
         'Confirm Reset': 'Confirm Reset',
-        'Are you sure you want to reset all settings to defaults?': 'Are you sure you want to reset all settings to defaults?'
+        'Are you sure you want to reset all settings to defaults?': 'Are you sure you want to reset all settings to defaults?',
+        'Export Browser Data': 'Export Browser Data',
+        'Import Browser Data': 'Import Browser Data',
+        'Data Management': 'Data Management'
     }
 }

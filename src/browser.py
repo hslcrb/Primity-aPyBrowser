@@ -3,7 +3,7 @@ import os
 from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot, QPoint
 from PySide6.QtWidgets import (QMainWindow, QToolBar, QLineEdit, QTabWidget, 
                              QStatusBar, QPushButton, QMenu, QMessageBox, QVBoxLayout, 
-                             QWidget, QHBoxLayout, QLabel)
+                             QWidget, QHBoxLayout, QLabel, QFileDialog)
 from PySide6.QtGui import QAction, QIcon, QPixmap, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
@@ -169,6 +169,10 @@ class PrimityBrowser(QMainWindow):
         # URL Bar
         self.url_bar = QLineEdit()
         self.url_bar.returnPressed.connect(self.navigate_to_url)
+        
+        # Security Icon inside URL bar
+        self.security_action = self.url_bar.addAction(self.get_icon("unlock"), QLineEdit.LeadingPosition)
+        
         self.navbar.addWidget(self.url_bar)
 
         # Bookmark Button
@@ -334,6 +338,47 @@ class PrimityBrowser(QMainWindow):
         with open('bookmarks.json', 'w') as f:
             json.dump(self.bookmarks, f)
 
+    def export_data(self):
+        path, _ = QFileDialog.getSaveFileName(self, self.tr_text("Export Browser Data"), "primity_data.json", "JSON Files (*.json)")
+        if path:
+            data = {
+                "bookmarks": self.bookmarks,
+                "settings": {key: self.settings.value(key) for key in self.settings.allKeys()}
+            }
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+            self.status.showMessage(f"Data exported to {path}", 3000)
+
+    def import_data(self):
+        path, _ = QFileDialog.getOpenFileName(self, self.tr_text("Import Browser Data"), "", "JSON Files (*.json)")
+        if path:
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                # Import bookmarks
+                if "bookmarks" in data:
+                    self.bookmarks.update(data["bookmarks"])
+                    self.save_bookmarks()
+                
+                # Import settings
+                if "settings" in data:
+                    for key, val in data["settings"].items():
+                        self.settings.setValue(key, val)
+                
+                self.status.showMessage("Data successfully imported", 3000)
+                self.reset_ui_after_import()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to import data: {e}")
+
+    def reset_ui_after_import(self):
+        # Refresh current state
+        self.current_lang = self.settings.value("language", "ko")
+        self.current_theme = self.settings.value("theme", "dark")
+        self.apply_theme()
+        self.toggle_language()
+        self.menu_btn_widget.setMenu(self.create_menu())
+
     def add_bookmark(self):
         widget = self.tabs.currentWidget()
         if isinstance(widget, QWebEngineView):
@@ -474,5 +519,15 @@ class PrimityBrowser(QMainWindow):
     def update_url_bar(self, q, browser=None):
         if browser != self.tabs.currentWidget():
             return
-        self.url_bar.setText(q.toString())
+        url_str = q.toString()
+        self.url_bar.setText(url_str)
         self.url_bar.setCursorPosition(0)
+        self.update_lock_icon(q)
+
+    def update_lock_icon(self, qurl):
+        if qurl.scheme() == "https":
+            self.security_action.setIcon(self.get_icon("lock"))
+        elif qurl.scheme() in ["http", "primity"]:
+            self.security_action.setIcon(self.get_icon("unlock"))
+        else:
+            self.security_action.setIcon(QIcon())

@@ -31,12 +31,16 @@ def main():
     QApplication.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings, False)
     QApplication.setAttribute(Qt.AA_NativeWindows, True)
     
-    # Chromium 엔진용 한글 입력 활성화 플래그
-    sys.argv.append("--no-sandbox") # 샌드박스로 인한 IME 통신 차단 해제
+    # Chromium 엔진용 한글 입력 및 최신 기술(HTTP/3) 활성화 플래그
+    sys.argv.append("--no-sandbox")
     sys.argv.append("--disable-setuid-sandbox")
     sys.argv.append("--ozone-platform=x11")
     sys.argv.append("--enable-wayland-ime") 
     sys.argv.append("--gtk-version=3")
+    
+    # HTTP/3 (QUIC) Support
+    sys.argv.append("--enable-quic")
+    sys.argv.append("--origin-to-force-quic-on=*")
     
     app = QApplication(sys.argv)
     app.setApplicationName("Primity")
