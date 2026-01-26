@@ -66,17 +66,7 @@ class PrimityBrowser(QMainWindow):
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
         self.tabs.tabBar().setExpanding(False) # Keep tabs to the left
 
-        # --- Tabs Layout ---
-        self.tabs_container = QWidget()
-        self.tabs_container.setObjectName("TabsContainer")
-        self.tabs_layout = QHBoxLayout(self.tabs_container)
-        self.tabs_layout.setContentsMargins(0, 0, 0, 0)
-        self.tabs_layout.setSpacing(0)
-
-        self.tabs_layout.addWidget(self.tabs)
-        self.tabs_layout.addStretch() # Ensure tabs are aligned to the left
-        
-        self.main_layout.addWidget(self.tabs_container)
+        self.main_layout.addWidget(self.tabs)
 
         # Apply monochrome theme
         self.apply_theme()
