@@ -14,7 +14,8 @@ DARK_VARS = {
     "--border": "#222222",
     "--hover": "#222222",
     "--input-bg": "#111111",
-    "--tab-bg": "#1a1a1a", # Dark gray for tabs in dark mode
+    "--tab-bar-bg": "#1a1a1a", # Dark Gray for tab bar in Dark Mode
+    "--tab-bg": "#111111",
     "--tab-selected-bg": "#2a2a2a",
     "--close-bg": "#ffffff",
     "--close-hover": "#ff5f56",
@@ -29,7 +30,8 @@ LIGHT_VARS = {
     "--border": "#eeeeee",
     "--hover": "#eeeeee",
     "--input-bg": "#ffffff",
-    "--tab-bg": "#f0f0f0", # Light gray for tabs in light mode
+    "--tab-bar-bg": "#f0f0f0", # Light Gray for tab bar in Light Mode
+    "--tab-bg": "#e0e0e0",
     "--tab-selected-bg": "#ffffff",
     "--close-bg": "#000000",
     "--close-hover": "#e81123",
@@ -70,7 +72,7 @@ QTabWidget::pane {
     background: var(--bg);
 }
 QTabBar {
-    background: var(--bg);
+    background: var(--tab-bar-bg);
     border: none;
 }
 QTabBar::tab {
