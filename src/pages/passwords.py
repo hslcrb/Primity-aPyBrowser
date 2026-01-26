@@ -3,8 +3,8 @@ import os
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QListWidget, QInputDialog, 
                              QMessageBox, QLineEdit)
-from src.config import TRANSLATIONS
-from src.ui_components import MinimalCard
+from src.config.constants import TRANSLATIONS
+from src.ui.components import MinimalCard
 
 class PasswordPage(QWidget):
     def __init__(self, main_window, lang='ko'):

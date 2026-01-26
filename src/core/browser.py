@@ -7,19 +7,15 @@ from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot, QPoint, Q
 from PySide6.QtGui import QAction, QIcon, QPixmap, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
-from src.config import TRANSLATIONS
-from src.ui_components import get_stylesheet
+
+from src.config.constants import TRANSLATIONS, DEFAULT_SETTINGS
+from src.ui.styles import get_stylesheet
+from src.ui.components import MinimalCard
 from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
-from src.utils import generate_strong_password
+from src.utils.helpers import generate_strong_password
+from src.core.ime_manager import IMEManager
 
-# Default System Config
-DEFAULT_SETTINGS = {
-    "language": "ko",
-    "theme": "dark",
-    "home_url": "https://www.google.com",
-    "kbd_layout": "dubeol"
-}
 
 class PrimityBrowser(QMainWindow):
     def __init__(self):
@@ -37,8 +33,11 @@ class PrimityBrowser(QMainWindow):
         
         self.bookmarks = self.load_bookmarks()
         
-        # IME state
-        self.kor_input_active = False
+        # Managers
+        self.ime = IMEManager(self)
+        self.kor_input_active = False # Local state for UI sync
+        
+        # Dragging support
         self._old_pos = None
 
         # Main Central Widget and Layout
@@ -177,8 +176,12 @@ class PrimityBrowser(QMainWindow):
         self.url_bar = QLineEdit()
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         
-        # Security Icon inside URL bar
+        # Security Icon (Left)
         self.security_action = self.url_bar.addAction(self.get_icon("unlock"), QLineEdit.LeadingPosition)
+        
+        # Bookmark Indicator (Right)
+        self.bookmark_toggle_action = self.url_bar.addAction(self.get_icon("star"), QLineEdit.TrailingPosition)
+        self.bookmark_toggle_action.triggered.connect(self.add_bookmark)
         
         self.navbar.addWidget(self.url_bar)
 
@@ -238,19 +241,13 @@ class PrimityBrowser(QMainWindow):
             self.close_btn.setIcon(self.get_icon(icon_name))
 
     def toggle_internal_ime(self):
-        self.kor_input_active = self.ime_btn.isChecked()
-        self.apply_ime_state()
+        self.kor_input_active = self.ime.toggle()
+        self.ime_btn.setChecked(self.kor_input_active)
         msg = "Korean Input (Internal) ON" if self.kor_input_active else "Korean Input (Internal) OFF"
         self.status.showMessage(msg, 2000)
 
     def apply_ime_state(self):
-        # Notify all open tabs to toggle their JS IME state and layout
-        layout = self.settings.value("kbd_layout", "dubeol")
-        script = f"window.dispatchEvent(new CustomEvent('PRIMITY_TOGGLE_IME', {{ detail: {{ active: {str(self.kor_input_active).lower()}, layout: '{layout}' }} }}));"
-        for i in range(self.tabs.count()):
-            widget = self.tabs.widget(i)
-            if isinstance(widget, QWebEngineView):
-                widget.page().runJavaScript(script)
+        self.ime.apply_to_all_tabs()
 
     def change_kbd_layout(self, layout_id):
         self.settings.setValue("kbd_layout", layout_id)
@@ -475,9 +472,10 @@ class PrimityBrowser(QMainWindow):
                 break
         
         if is_bookmarked:
-            self.security_action.setIcon(self.get_icon("star_yellow")) # Also show in URL bar lead?
+            self.bookmark_toggle_action.setIcon(self.get_icon("star_yellow"))
             self.bookmark_btn.setIcon(self.get_icon("star_yellow"))
         else:
+            self.bookmark_toggle_action.setIcon(self.get_icon("star"))
             self.bookmark_btn.setIcon(self.get_icon("star"))
 
     def suggest_password(self):
@@ -513,12 +511,8 @@ class PrimityBrowser(QMainWindow):
             });
             """
             
-            # Load and inject internal IME script
-            ime_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'hangul_ime.js')
-            if os.path.exists(ime_path):
-                with open(ime_path, 'r') as f:
-                    ime_js = f.read()
-                widget.loadFinished.connect(lambda _, b=widget: b.page().runJavaScript(ime_js))
+            # Software IME Integration
+            self.ime.inject_script(widget)
 
             # Connect reload state triggers
             widget.loadStarted.connect(lambda b=widget: self.start_reload_anim(b))
@@ -532,6 +526,7 @@ class PrimityBrowser(QMainWindow):
                 elif "PRIMITY_IME_TOGGLED_VIA_KBD" in message:
                     active = "true" in message.lower()
                     self.kor_input_active = active
+                    self.ime.active = active # Sync manager state
                     self.ime_btn.setChecked(active)
             
             widget.page().javaScriptConsoleMessage = handle_console_message

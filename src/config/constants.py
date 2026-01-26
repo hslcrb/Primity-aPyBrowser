@@ -1,3 +1,12 @@
+# Default System Settings and Constants
+
+DEFAULT_SETTINGS = {
+    "language": "ko",
+    "theme": "dark",
+    "home_url": "https://www.google.com",
+    "kbd_layout": "dubeol"
+}
+
 # Translation Dictionary
 TRANSLATIONS = {
     'ko': {

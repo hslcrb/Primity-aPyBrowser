@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, 
                              QComboBox, QLineEdit, QHBoxLayout, QScrollArea)
-from src.config import TRANSLATIONS
-from src.ui_components import MinimalCard
+from src.config.constants import TRANSLATIONS
+from src.ui.components import MinimalCard
 
 class SettingsPage(QWidget):
     def __init__(self, main_window, lang='ko'):

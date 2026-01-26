@@ -1,65 +1,51 @@
-# Primity (프리마이티)
+# Primity (프리마이티) - Professional Minimalist Browser
 
-> **Note: Korean translation follows the English version below.**
-> **알림: 영문 설명 아래에 한국어 번역이 포함되어 있습니다.**
-
----
-
-# English Version
-
-## Primity Browser
-A minimalist, monochrome web browser built with PySide6. Designed for users who demand purity and focus. Primity features an independent, built-in Software IME to solve the long-standing "Korean input bug" on Linux.
-
-### 🚀 Key Features
-- **Independent Software IME**: A custom Hangul automata integrated directly into the browser. Type Korean ('국가와' etc.) flawlessly regardless of Linux version or OS IME settings.
-- **Multi-Layout Support**: Switch between **Dubeolshik**, **Sebeolshik 390**, and **Sebeolshik Final** instantly in settings.
-- **Minimalist Design**: Zero distractions. A pure monochrome aesthetic with a custom title bar and refined tab management.
-- **High Contrast Themes**: Real-time switching between professional Dark and Light modes.
-- **Custom Title Bar**: A consistent window experience across all operating systems.
-- **Smart Address Bar**: Automatically distinguishes between URLs and search queries (directs to Google).
-- **Favicon Support**: Visual site identification with a minimal globe icon fallback.
-- **Password Manager**: Secure internal page for managing credentials with 16-character strong password generation.
-
-### 🛠 Installation
-1. Clone this repository.
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### 💻 Usage
-Run the browser:
-```bash
-./run.sh
-```
-*Toggle Korean Input:* Click the **[Korean Input]** button in the toolbar or press the **Right Alt** key.
+> **Modern, Monochrome, Modular.**
 
 ---
 
-# 한국어 버전
+# English Version (EN)
 
-## 프리마이티 브라우저 (Primity Browser)
-PySide6 기반의 미니멀리즘 흑백 웹 브라우저입니다. 오직 본질에만 집중하고자 하는 사용자를 위해 설계되었습니다. 리눅스 환경에서 고질적으로 발생하는 '한글 입력 오류'를 완벽히 해결하기 위해 독자적인 **내장형 소프트웨어 입력기(Software IME)**를 탑재했습니다.
+## Introduction
+Primity is a high-performance, minimalist web browser built with PySide6. It is designed for developers and power users who value focus and purity. Version 0.0.32 introduces a completely refactored modular architecture and professional-grade internal IME.
 
-### 🚀 주요 기능
-- **독립형 한글 입력기 (Software IME)**: 브라우저에 직접 통합된 한글 오토마타 엔진. 리눅스 버전이나 OS 입력(Fcitx/IBus) 설정에 구애받지 않고 '국가와' 같은 복잡한 글자도 완벽하게 입력 가능합니다.
-- **다중 자판 레이아웃**: **두벌식 표준**, **세벌식 390**, **세벌식 최종** 자판을 설정에서 즉시 변경할 수 있습니다.
-- **미니멀리즘 디자인**: 시각적 방해 요소를 제거한 정갈한 흑백 디자인과 커스텀 상단바.
-- **고대비 테마**: 전문가를 위한 다크 모드 및 라이트 모드 실시간 전환 지원.
-- **스마트 주소창**: URL과 검색어를 지능적으로 구분하여 자동으로 구글 검색으로 연결.
-- **파비콘 지원**: 개별 사이트 아이콘 표시 및 미니멀 지구본 기본 아이콘 제공.
-- **비밀번호 관리자**: 내장 페이지를 통한 보안 관리 및 16자리 강력 암호 생성 기능.
+## 🌟 Key Features
+- **Independent Software IME**: Full state-machine Hangul automata. Handles complex syllables and liaison ('국가와', '앉아') flawlessly without OS dependencies.
+- **Modular Architecture**: Reorganized source code for high maintainability. Logical separation of Core, UI, Config, and Pages.
+- **Advanced Data Management**: Export and Import your entire browser profile (bookmarks, settings) as a JSON file.
+- **HTTP/3 (QUIC) Support**: Fully enabled latest transmission protocols for blazing-fast browsing.
+- **Refined Navigation UX**:
+  - **Animated Reload**: Real-time status feedback (Yellow: Loading, Green: Success).
+  - **Bookmark Collections**: Organize your favorite sites into categorized folders.
+  - **Embedded Security Indicators**: Visual HTTPS/HTTP status without sacrificing UI space.
+- **High Contrast Professionals Themes**: Seamless real-time switching between professional Dark and Light modes.
 
-### 🛠 설치 방법
-1. 저장소를 클론합니다.
-2. 의존성 패키지를 설치합니다:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## 🛠 Project Structure
+- `src/core`: Main logic and managers.
+- `src/ui`: Styling and layouts.
+- `src/config`: Translations and defaults.
+- `src/pages`: Internal secure pages.
 
-### 💻 사용 방법
-브라우저 실행:
+---
+
+# 한국어 버전 (KO)
+
+## 소개 (Introduction)
+프리마이티(Primity)는 PySide6를 기반으로 제작된 고성능 미니멀리즘 웹 브라우저입니다. 본질에 집중하고자 하는 전문가와 고급 사용자를 위해 설계되었습니다. 이번 v0.0.32 업데이트에서는 체계적인 **소스코드 모듈화**와 **프로급 내장 한글 입력기**를 탑재했습니다.
+
+## 🌟 주요 기능
+- **독립형 소프트웨어 IME**: 상태 머신 기반의 고성능 한글 오토마타. '국가와', '앉아', '읽기' 등 복잡한 조합과 연음 법칙을 OS 입력기 없이 완벽하게 처리합니다.
+- **체계적 모듈화 (Modular)**: 소스코드를 기능별(Core, UI, Config, Pages)로 철저히 분리하여 높은 유지보수성과 확장성을 확보했습니다.
+- **고급 데이터 관리**: 북마크 컬렉션 및 모든 브라우저 설정을 JSON 형식으로 내보내거나 가져올 수 있습니다.
+- **최신 기술 지원 (HTTP/3)**: Chromium 엔진의 QUIC 지원을 활성화하여 차세대 웹 환경에서의 압도적인 속도를 제공합니다.
+- **고도화된 내비게이션 UX**:
+  - **애니메이션 새로고침**: 진행 단계별 색상 변화(노란색: 로딩, 초록색: 완료)로 직관적인 피드백 제공.
+  - **북마크 컬렉션**: 즐겨찾기를 카테고리별 폴더로 세분화하여 체계적으로 관리.
+  - **전용 보안 표시기**: 주소창 내 별도의 자물쇠 아이콘으로 보안 연결 상태 구분.
+- **전문가용 고대비 테마**: 눈이 편안한 흑백 기반의 다크 모드와 세련된 라이트 모드 실시간 전환.
+
+## 🛠 설치 및 실행
 ```bash
 ./run.sh
 ```
-*한글 전환:* 툴바의 **[한글 입력]** 버튼을 누르거나 키보드의 **오른쪽 Alt 키**를 누르세요.
+*한글 전환:* 툴바의 **[한글 입력]** 버튼 또는 키보드의 **오른쪽 Alt 키**를 활용하세요.

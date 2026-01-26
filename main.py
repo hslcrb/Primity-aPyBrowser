@@ -24,7 +24,7 @@ if os.path.exists(system_plugin) and os.path.exists(venv_plugin_path):
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-from src.browser import PrimityBrowser
+from src.core.browser import PrimityBrowser
 
 def main():
     # 리눅스 X11 한글 입력 호환성 속성
