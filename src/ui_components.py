@@ -40,6 +40,18 @@ QLineEdit {
     padding: 5px 10px;
     border-radius: 0px;
 }
+QToolButton {
+    background: transparent;
+    color: #ffffff;
+    border: none;
+    padding: 4px;
+}
+QToolButton:hover {
+    background: #333333;
+}
+QToolButton:pressed {
+    background: #555555;
+}
 QStatusBar {
     background: #000000;
     color: #666666;
@@ -113,6 +125,18 @@ QLineEdit {
     border: 1px solid #cccccc;
     padding: 5px 10px;
     border-radius: 0px;
+}
+QToolButton {
+    background: transparent;
+    color: #000000;
+    border: none;
+    padding: 4px;
+}
+QToolButton:hover {
+    background: #eeeeee;
+}
+QToolButton:pressed {
+    background: #dddddd;
 }
 QStatusBar {
     background: #ffffff;
