@@ -151,7 +151,9 @@ class PrimityBrowser(QMainWindow):
             self.toggle_maximize()
 
     def get_icon(self, name):
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', f"{name}.svg")
+        # Correct path for modularized structure: src/core/browser.py -> ../../assets/icons/
+        root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        icon_path = os.path.join(root_dir, 'assets', 'icons', f"{name}.svg")
         if os.path.exists(icon_path):
             return QIcon(icon_path)
         return QIcon()
