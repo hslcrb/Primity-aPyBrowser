@@ -1,9 +1,10 @@
 import json
 import os
-from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot
+from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot, QPoint
 from PySide6.QtWidgets import (QMainWindow, QToolBar, QLineEdit, QTabWidget, 
-                             QStatusBar, QPushButton, QMenu, QMessageBox, QVBoxLayout, QWidget)
-from PySide6.QtGui import QAction, QIcon, QPixmap
+                             QStatusBar, QPushButton, QMenu, QMessageBox, QVBoxLayout, 
+                             QWidget, QHBoxLayout, QLabel)
+from PySide6.QtGui import QAction, QIcon, QPixmap, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
@@ -24,6 +25,9 @@ class PasswordBridge(QObject):
 class PrimityBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowMinMaxButtonsHint)
+        self.setAttribute(Qt.WA_TranslucentBackground, False)
+
         self.settings = QSettings("Primity", "Browser")
         self.current_lang = self.settings.value("language", "ko")
         self.current_theme = self.settings.value("theme", "dark")
@@ -33,12 +37,22 @@ class PrimityBrowser(QMainWindow):
         
         self.bookmarks = self.load_bookmarks()
         
+        # Dragging support
+        self._old_pos = None
+
         # Bridge for password detection
         self.bridge = PasswordBridge()
         self.bridge.passwordFocused.connect(self.suggest_password)
 
-        # Apply monochrome theme
-        self.apply_theme()
+        # Main Central Widget and Layout
+        self.central_widget = QWidget()
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
+        self.setCentralWidget(self.central_widget)
+
+        # Custom Title Bar
+        self.setup_title_bar()
 
         # Tab Widget
         self.tabs = QTabWidget()
@@ -47,15 +61,84 @@ class PrimityBrowser(QMainWindow):
         self.tabs.currentChanged.connect(self.current_tab_changed)
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
-        self.setCentralWidget(self.tabs)
+        self.main_layout.addWidget(self.tabs)
 
-        # Navigation Bar
+        # Navigation Bar (As a toolbar but added to layout)
         self.navbar = QToolBar("Navigation")
         self.navbar.setMovable(False)
-        self.navbar.setIconSize(self.navbar.iconSize() * 0.8) # Keep it minimal
-        self.addToolBar(self.navbar)
+        self.navbar.setIconSize(self.navbar.iconSize() * 0.8)
+        self.addToolBar(Qt.TopToolBarArea, self.navbar) # This might still work, but layout is safer
+        # Actually, let's keep it as addToolBar for native behavior or add to layout.
+        # Frameless QMainWindow still handles toolbars.
+
+        # Apply monochrome theme
+        self.apply_theme()
         
         self.init_ui()
+
+    def setup_title_bar(self):
+        self.title_bar = QWidget()
+        self.title_bar.setObjectName("TitleBar")
+        self.title_bar.setFixedHeight(30)
+        
+        title_layout = QHBoxLayout(self.title_bar)
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        title_layout.setSpacing(0)
+        
+        # Window Title Label
+        self.title_label = QLabel(self.tr_text("Browser Name"))
+        self.title_label.setObjectName("WindowTitle")
+        title_layout.addWidget(self.title_label)
+        
+        title_layout.addStretch()
+        
+        # Window Buttons
+        min_btn = QPushButton()
+        min_btn.setIcon(self.get_icon("minimize"))
+        min_btn.setProperty("class", "WindowButton")
+        min_btn.clicked.connect(self.showMinimized)
+        title_layout.addWidget(min_btn)
+        
+        self.max_btn = QPushButton()
+        self.max_btn.setIcon(self.get_icon("maximize"))
+        self.max_btn.setProperty("class", "WindowButton")
+        self.max_btn.clicked.connect(self.toggle_maximize)
+        title_layout.addWidget(self.max_btn)
+        
+        close_btn = QPushButton()
+        close_btn.setIcon(self.get_icon("close"))
+        close_btn.setProperty("class", "WindowButton")
+        close_btn.setObjectName("CloseButton")
+        close_btn.clicked.connect(self.close)
+        title_layout.addWidget(close_btn)
+        
+        self.main_layout.addWidget(self.title_bar)
+
+    def toggle_maximize(self):
+        if self.isMaximized():
+            self.showNormal()
+            self.max_btn.setIcon(self.get_icon("maximize"))
+        else:
+            self.showMaximized()
+            self.max_btn.setIcon(self.get_icon("restore"))
+
+    # Mouse events for dragging frameless window
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton and self.title_bar.underMouse():
+            self._old_pos = event.globalPosition().toPoint()
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self._old_pos is not None:
+            delta = event.globalPosition().toPoint() - self._old_pos
+            self.move(self.pos() + delta)
+            self._old_pos = event.globalPosition().toPoint()
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        self._old_pos = None
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
+        if self.title_bar.underMouse():
+            self.toggle_maximize()
 
     def get_icon(self, name):
         icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', f"{name}.svg")
@@ -170,6 +253,8 @@ class PrimityBrowser(QMainWindow):
         self.settings.setValue("language", self.current_lang)
         self.init_ui() 
         self.menu_btn_widget.setMenu(self.create_menu())
+        # Update title bar label
+        self.title_label.setText(self.tr_text("Browser Name"))
         # If settings tab is open, update it
         for i in range(self.tabs.count()):
             widget = self.tabs.widget(i)
@@ -205,7 +290,6 @@ class PrimityBrowser(QMainWindow):
 
     def suggest_password(self):
         new_pwd = generate_strong_password()
-        # Copy to clipboard and notify
         QApplication.clipboard().setText(new_pwd)
         QMessageBox.information(self, "Password Suggestion", 
                                 f"Detected password field.\nSuggested strong password has been copied to clipboard:\n\n{new_pwd}")
@@ -228,7 +312,6 @@ class PrimityBrowser(QMainWindow):
             widget.page().setWebChannel(channel)
             channel.registerObject("bridge", self.bridge)
             
-            # Injected script content
             injection_script = """
             new QWebChannel(qt.webChannelTransport, function(channel) {
                 window.bridge = channel.objects.bridge;
@@ -239,10 +322,7 @@ class PrimityBrowser(QMainWindow):
                 });
             });
             """
-            # Also need to include qwebchannel.js
-            # For simplicity, we assume we can runJS after load
             widget.loadFinished.connect(lambda _, b=widget: b.page().runJavaScript(injection_script))
-            # Note: For production, qwebchannel.js should be loaded properly.
 
             widget.setUrl(qurl)
             widget.urlChanged.connect(lambda qurl, browser=widget: self.update_url_bar(qurl, browser))
@@ -267,7 +347,7 @@ class PrimityBrowser(QMainWindow):
                 self.update_title(widget)
             else:
                 self.url_bar.setText(f"primity://{type(widget).__name__.lower().replace('page','')}")
-                self.setWindowTitle(f"{self.tabs.tabText(i)} - {self.tr_text('Browser Name')}")
+                self.title_label.setText(f"{self.tabs.tabText(i)} - {self.tr_text('Browser Name')}")
 
     def close_current_tab(self, i):
         if self.tabs.count() < 2:
@@ -278,7 +358,7 @@ class PrimityBrowser(QMainWindow):
         if browser != self.tabs.currentWidget():
             return
         title = browser.title()
-        self.setWindowTitle(f"{title} - {self.tr_text('Browser Name')}")
+        self.title_label.setText(f"{title} - {self.tr_text('Browser Name')}")
 
     def navigate_home(self):
         curr = self.tabs.currentWidget()

@@ -9,6 +9,27 @@ DARK_STYLE = """
 QMainWindow {
     background: #000000;
 }
+#TitleBar {
+    background: #000000;
+    border-bottom: 1px solid #222222;
+}
+#WindowTitle {
+    color: #888888;
+    font-size: 12px;
+    padding-left: 10px;
+}
+QPushButton[class="WindowButton"] {
+    background: transparent;
+    border: none;
+    width: 45px;
+    height: 30px;
+}
+QPushButton[class="WindowButton"]:hover {
+    background: #222222;
+}
+QPushButton#CloseButton:hover {
+    background: #e81123;
+}
 QTabWidget::pane {
     border: 1px solid #333333;
     background: #000000;
@@ -94,6 +115,27 @@ QLabel {
 LIGHT_STYLE = """
 QMainWindow {
     background: #ffffff;
+}
+#TitleBar {
+    background: #ffffff;
+    border-bottom: 1px solid #eeeeee;
+}
+#WindowTitle {
+    color: #888888;
+    font-size: 12px;
+    padding-left: 10px;
+}
+QPushButton[class="WindowButton"] {
+    background: transparent;
+    border: none;
+    width: 45px;
+    height: 30px;
+}
+QPushButton[class="WindowButton"]:hover {
+    background: #eeeeee;
+}
+QPushButton#CloseButton:hover {
+    background: #e81123;
 }
 QTabWidget::pane {
     border: 1px solid #dddddd;
