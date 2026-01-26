@@ -27,6 +27,7 @@ class PrimityBrowser(QMainWindow):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowMinMaxButtonsHint)
         self.setAttribute(Qt.WA_TranslucentBackground, False)
+        self.setAttribute(Qt.WA_InputMethodEnabled, True)
 
         self.settings = QSettings("Primity", "Browser")
         self.current_lang = self.settings.value("language", "ko")
@@ -317,6 +318,7 @@ class PrimityBrowser(QMainWindow):
             if qurl is None:
                 qurl = QUrl('https://www.google.com')
             widget = QWebEngineView()
+            widget.setAttribute(Qt.WA_InputMethodEnabled, True)
             
             # Setup bridge for password detection injection
             channel = QWebChannel(widget.page())
