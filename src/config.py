@@ -22,7 +22,8 @@ TRANSLATIONS = {
         'Confirm Delete': '정말로 삭제하시겠습니까?',
         'App Settings': '앱 설정',
         'Appearance': '디자인',
-        'Browser Name': 'Primity 프리마이티'
+        'Browser Name': 'Primity 프리마이티',
+        'Korean Input': '한글 입력'
     },
     'en': {
         'Back': 'Back',
@@ -46,6 +47,7 @@ TRANSLATIONS = {
         'Confirm Delete': 'Are you sure you want to delete?',
         'App Settings': 'App Settings',
         'Appearance': 'Appearance',
-        'Browser Name': 'Primity'
+        'Browser Name': 'Primity',
+        'Korean Input': 'Korean Input'
     }
 }

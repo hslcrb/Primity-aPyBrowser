@@ -29,7 +29,8 @@ class PrimityBrowser(QMainWindow):
         
         self.bookmarks = self.load_bookmarks()
         
-        # Dragging support
+        # IME state
+        self.kor_input_active = False
         self._old_pos = None
 
         # Main Central Widget and Layout
@@ -167,6 +168,14 @@ class PrimityBrowser(QMainWindow):
         self.bookmark_btn.triggered.connect(self.add_bookmark)
         self.navbar.addAction(self.bookmark_btn)
 
+        # Internal Korean Input Button (Fixed Toggle)
+        self.ime_btn = QPushButton(self.tr_text("Korean Input"))
+        self.ime_btn.setCheckable(True)
+        self.ime_btn.setObjectName("PrimaryButton")
+        self.ime_btn.setFixedSize(90, 36)
+        self.ime_btn.clicked.connect(self.toggle_internal_ime)
+        self.navbar.addWidget(self.ime_btn)
+
         # Menu Button
         self.menu_btn_widget = QPushButton()
         self.menu_btn_widget.setIcon(self.get_icon("menu"))
@@ -189,6 +198,18 @@ class PrimityBrowser(QMainWindow):
         if hasattr(self, 'close_btn'):
             icon_name = "close_black" if self.current_theme == "dark" else "close_white"
             self.close_btn.setIcon(self.get_icon(icon_name))
+
+    def toggle_internal_ime(self):
+        self.kor_input_active = self.ime_btn.isChecked()
+        # Notify all open tabs to toggle their JS IME state
+        script = f"window.dispatchEvent(new CustomEvent('PRIMITY_TOGGLE_IME', {{ detail: {{ active: {str(self.kor_input_active).lower()} }} }}));"
+        for i in range(self.tabs.count()):
+            widget = self.tabs.widget(i)
+            if isinstance(widget, QWebEngineView):
+                widget.page().runJavaScript(script)
+        
+        msg = "Korean Input (Internal) ON" if self.kor_input_active else "Korean Input (Internal) OFF"
+        self.status.showMessage(msg, 2000)
 
     def create_menu(self):
         menu = QMenu(self)
@@ -320,13 +341,21 @@ class PrimityBrowser(QMainWindow):
             });
             """
             
-            # Inject detection script
-            widget.loadFinished.connect(lambda _, b=widget: b.page().runJavaScript(detection_script))
+            # Load and inject internal IME script
+            ime_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'hangul_ime.js')
+            if os.path.exists(ime_path):
+                with open(ime_path, 'r') as f:
+                    ime_js = f.read()
+                widget.loadFinished.connect(lambda _, b=widget: b.page().runJavaScript(ime_js))
 
             # Handle notification via console messages
             def handle_console_message(level, message, line, source):
                 if "PRIMITY_PWD_FOCUS" in message:
                     self.suggest_password()
+                elif "PRIMITY_IME_TOGGLED_VIA_KBD" in message:
+                    active = "true" in message.lower()
+                    self.kor_input_active = active
+                    self.ime_btn.setChecked(active)
             
             widget.page().javaScriptConsoleMessage = handle_console_message
 
