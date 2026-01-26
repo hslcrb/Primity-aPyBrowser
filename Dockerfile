@@ -1,19 +1,23 @@
 FROM python:3.11-slim
 
 # Install system dependencies required for QtWebEngine
+ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libnss3 \
-    libdbus-1-3 \
-    libx11-6 \
-    libxext6 \
-    libxrender1 \
-    libxtst6 \
-    libxi6 \
     libgl1-mesa-glx \
-    libfontconfig1 \
-    libfreetype6 \
+    libnss3 \
+    libxcomposite1 \
     libxcursor1 \
-    libxinerama1 \
+    libxi6 \
+    libxtst6 \
+    libasound2 \
+    libfontconfig1 \
+    libxrandr2 \
+    libpangocairo-1.0-0 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libdbus-1-3 \
     libxkbcommon-x11-0 \
     libxcb-icccm4 \
     libxcb-image0 \
@@ -21,11 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-randr0 \
     libxcb-render-util0 \
     libxcb-xinerama0 \
-    libxcb-shape0 \
-    libxcb-sync1 \
     libxcb-xfixes0 \
     libxshmfence1 \
-    libasound2 \
     libegl1 \
     && rm -rf /var/lib/apt/lists/*
 
