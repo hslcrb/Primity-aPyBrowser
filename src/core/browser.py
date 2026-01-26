@@ -56,21 +56,6 @@ class PrimityBrowser(QMainWindow):
         self.navbar.setIconSize(self.navbar.iconSize() * 0.8)
         self.main_layout.addWidget(self.navbar) # Keep this line, the snippet's addLayout was incorrect here
         
-        # --- Tabs Layout ---
-        tabs_container = QWidget()
-        tabs_container.setObjectName("TabsContainer")
-        tabs_layout = QHBoxLayout(tabs_container)
-        tabs_layout.setContentsMargins(5, 2, 5, 0)
-        tabs_layout.setSpacing(0)
-
-        # New Tab Button (at the front)
-        self.add_tab_btn = QPushButton()
-        self.add_tab_btn.setIcon(self.get_icon("plus"))
-        self.add_tab_btn.setFixedSize(28, 28)
-        self.add_tab_btn.setObjectName("PrimaryButton")
-        self.add_tab_btn.clicked.connect(lambda: self.add_new_tab())
-        tabs_layout.addWidget(self.add_tab_btn)
-
         # Tab Widget
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
@@ -78,9 +63,18 @@ class PrimityBrowser(QMainWindow):
         self.tabs.currentChanged.connect(self.current_tab_changed)
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
-        tabs_layout.addWidget(self.tabs)
         
-        self.main_layout.addWidget(tabs_container)
+        # New Tab Button (Integrated into Tab Bar corner)
+        self.add_tab_btn = QPushButton()
+        self.add_tab_btn.setIcon(self.get_icon("plus"))
+        self.add_tab_btn.setFixedSize(32, 28)
+        self.add_tab_btn.setCursor(Qt.PointingHandCursor)
+        self.add_tab_btn.setObjectName("PrimaryButton")
+        self.add_tab_btn.setStyleSheet("border: none; background: transparent; padding: 2px;")
+        self.add_tab_btn.clicked.connect(lambda: self.add_new_tab())
+        
+        self.tabs.setCornerWidget(self.add_tab_btn, Qt.TopLeftCorner)
+        self.main_layout.addWidget(self.tabs)
 
         # Apply monochrome theme
         self.apply_theme()
