@@ -21,7 +21,8 @@ TRANSLATIONS = {
         'Saved Passwords': '저장된 비밀번호',
         'Confirm Delete': '정말로 삭제하시겠습니까?',
         'App Settings': '앱 설정',
-        'Appearance': '디자인'
+        'Appearance': '디자인',
+        'Browser Name': '프리마이티'
     },
     'en': {
         'Back': 'Back',
@@ -44,6 +45,7 @@ TRANSLATIONS = {
         'Saved Passwords': 'Saved Passwords',
         'Confirm Delete': 'Are you sure you want to delete?',
         'App Settings': 'App Settings',
-        'Appearance': 'Appearance'
+        'Appearance': 'Appearance',
+        'Browser Name': 'Primity'
     }
 }

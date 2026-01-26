@@ -28,7 +28,7 @@ class PrimityBrowser(QMainWindow):
         self.current_lang = self.settings.value("language", "ko")
         self.current_theme = self.settings.value("theme", "dark")
         
-        self.setWindowTitle("Primity Browser")
+        self.setWindowTitle(self.tr_text("Browser Name"))
         self.setGeometry(100, 100, 1280, 800)
         
         self.bookmarks = self.load_bookmarks()
@@ -267,7 +267,7 @@ class PrimityBrowser(QMainWindow):
                 self.update_title(widget)
             else:
                 self.url_bar.setText(f"primity://{type(widget).__name__.lower().replace('page','')}")
-                self.setWindowTitle(f"{self.tabs.tabText(i)} - Primity Browser")
+                self.setWindowTitle(f"{self.tabs.tabText(i)} - {self.tr_text('Browser Name')}")
 
     def close_current_tab(self, i):
         if self.tabs.count() < 2:
@@ -278,7 +278,7 @@ class PrimityBrowser(QMainWindow):
         if browser != self.tabs.currentWidget():
             return
         title = browser.title()
-        self.setWindowTitle(f"{title} - Primity Browser")
+        self.setWindowTitle(f"{title} - {self.tr_text('Browser Name')}")
 
     def navigate_home(self):
         curr = self.tabs.currentWidget()

@@ -1,4 +1,4 @@
-# Primity Browser
+# Primity Browser (프리마이티 브라우저)
 
 A lightweight, PySide6-based web browser.
 

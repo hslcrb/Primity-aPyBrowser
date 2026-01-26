@@ -4,7 +4,7 @@ from src.browser import PrimityBrowser
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("Primity Browser")
+    app.setApplicationName("Primity")
     window = PrimityBrowser()
     window.show()
     sys.exit(app.exec())
