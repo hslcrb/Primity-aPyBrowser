@@ -348,7 +348,8 @@ class PrimityBrowser(QMainWindow):
                 self.update_title(widget)
             else:
                 self.url_bar.setText(f"primity://{type(widget).__name__.lower().replace('page','')}")
-                self.title_label.setText(f"{self.tabs.tabText(i)} - {self.tr_text('Browser Name')}")
+                tab_text = self.tabs.tabText(i)
+                self.title_label.setText(f"{self.tr_text('Browser Name')} | {tab_text}")
 
     def close_current_tab(self, i):
         if self.tabs.count() < 2:
@@ -359,7 +360,10 @@ class PrimityBrowser(QMainWindow):
         if browser != self.tabs.currentWidget():
             return
         title = browser.title()
-        self.title_label.setText(f"{title} - {self.tr_text('Browser Name')}")
+        if title:
+            self.title_label.setText(f"{self.tr_text('Browser Name')} | {title}")
+        else:
+            self.title_label.setText(self.tr_text('Browser Name'))
 
     def navigate_home(self):
         curr = self.tabs.currentWidget()

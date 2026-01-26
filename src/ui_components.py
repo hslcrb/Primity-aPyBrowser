@@ -61,21 +61,41 @@ QPushButton#CloseButton:hover {
     background: var(--danger);
 }
 QTabWidget::pane {
-    border: 1px solid var(--dark-gray);
+    border: none;
+    border-top: 1px solid var(--border);
     background: var(--bg);
+}
+QTabBar {
+    background: var(--bg);
+    border: none;
 }
 QTabBar::tab {
     background: var(--bg);
     color: var(--gray);
-    padding: 10px 15px;
-    border: 1px solid var(--dark-gray);
+    padding: 4px 12px;
+    border: 1px solid var(--border);
     border-bottom: none;
     margin-right: 1px;
+    font-size: 11px;
+    min-width: 80px;
 }
 QTabBar::tab:selected {
     background: var(--input-bg);
     color: var(--fg);
     border-top: 2px solid var(--fg);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+}
+QTabBar::tab:hover:!selected {
+    background: var(--hover);
+}
+QTabBar::close-button {
+    image: url(assets/icons/close.svg);
+    background: transparent;
+    border-radius: 0px;
+}
+QTabBar::close-button:hover {
+    background: var(--danger);
 }
 QToolBar {
     background: var(--bg);
