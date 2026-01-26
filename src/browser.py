@@ -7,7 +7,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
 from src.config import TRANSLATIONS
-from src.ui_components import STYLE_SHEET
+from src.ui_components import DARK_STYLE, LIGHT_STYLE
 from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
 
@@ -16,14 +16,15 @@ class PrimityBrowser(QMainWindow):
         super().__init__()
         self.settings = QSettings("Primity", "Browser")
         self.current_lang = self.settings.value("language", "ko")
+        self.current_theme = self.settings.value("theme", "dark")
         
         self.setWindowTitle("Primity Browser")
         self.setGeometry(100, 100, 1280, 800)
         
         self.bookmarks = self.load_bookmarks()
         
-        # Apply modern Liquid Glass theme
-        self.setStyleSheet(STYLE_SHEET)
+        # Apply monochrome theme
+        self.apply_theme()
 
         # Tab Widget
         self.tabs = QTabWidget()
@@ -40,6 +41,12 @@ class PrimityBrowser(QMainWindow):
         self.addToolBar(self.navbar)
         
         self.init_ui()
+
+    def apply_theme(self):
+        if self.current_theme == "dark":
+            self.setStyleSheet(DARK_STYLE)
+        else:
+            self.setStyleSheet(LIGHT_STYLE)
 
     def tr_text(self, key):
         return TRANSLATIONS.get(self.current_lang, TRANSLATIONS['ko']).get(key, key)
@@ -80,7 +87,7 @@ class PrimityBrowser(QMainWindow):
         # Menu Button
         self.menu_btn_widget = QPushButton("☰")
         self.menu_btn_widget.setFixedSize(36, 36)
-        self.menu_btn_widget.setStyleSheet("border: none; color: white; font-size: 18px; background: transparent;")
+        self.menu_btn_widget.setObjectName("SecondaryButton") # Use defined minimal button style
         self.menu_btn_widget.setMenu(self.create_menu())
         self.navbar.addWidget(self.menu_btn_widget)
 
@@ -104,6 +111,13 @@ class PrimityBrowser(QMainWindow):
             
         menu.addSeparator()
 
+        # Theme Toggle
+        theme_action = QAction(f"Theme: {self.current_theme.upper()}", self)
+        theme_action.triggered.connect(self.toggle_theme)
+        menu.addAction(theme_action)
+
+        menu.addSeparator()
+
         # Global Password Manager (Internal Tab)
         pwd_action = QAction(self.tr_text("Password Manager"), self)
         pwd_action.triggered.connect(self.open_password_tab)
@@ -115,6 +129,13 @@ class PrimityBrowser(QMainWindow):
         menu.addAction(settings_action)
         
         return menu
+
+    def toggle_theme(self):
+        self.current_theme = 'light' if self.current_theme == 'dark' else 'dark'
+        self.settings.setValue("theme", self.current_theme)
+        self.apply_theme()
+        # Refresh menu to update text
+        self.menu_btn_widget.setMenu(self.create_menu())
 
     def open_password_tab(self):
         self.add_new_tab(internal="passwords", label=self.tr_text("Password Manager"))

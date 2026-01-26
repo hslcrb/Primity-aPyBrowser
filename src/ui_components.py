@@ -1,114 +1,154 @@
-from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect
-from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QFrame
 
-def get_shadow():
-    shadow = QGraphicsDropShadowEffect()
-    shadow.setBlurRadius(20)
-    shadow.setXOffset(0)
-    shadow.setYOffset(10)
-    shadow.setColor(QColor(0, 0, 0, 150))
-    return shadow
-
-class GlassCard(QFrame):
+class MinimalCard(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("GlassCard")
-        self.setGraphicsEffect(get_shadow())
+        self.setObjectName("MinimalCard")
 
-STYLE_SHEET = """
+DARK_STYLE = """
 QMainWindow {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #1a1a2e, stop:1 #16213e);
+    background: #000000;
 }
 QTabWidget::pane {
-    border: none;
-    background: transparent;
+    border: 1px solid #333333;
+    background: #000000;
 }
 QTabBar::tab {
-    background: rgba(255, 255, 255, 0.05);
-    color: #b0b0b0;
-    padding: 10px 20px;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    margin-right: 2px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #000000;
+    color: #888888;
+    padding: 10px 15px;
+    border: 1px solid #333333;
     border-bottom: none;
+    margin-right: 1px;
 }
 QTabBar::tab:selected {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-bottom: none;
+    background: #111111;
+    color: #ffffff;
+    border-top: 2px solid #ffffff;
 }
 QToolBar {
-    background: rgba(255, 255, 255, 0.05);
+    background: #000000;
     border: none;
-    padding: 8px;
-    spacing: 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid #333333;
+    padding: 5px;
+    spacing: 5px;
 }
 QLineEdit {
-    background: rgba(0, 0, 0, 0.3);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 18px;
-    padding: 5px 15px;
-    font-size: 13px;
-}
-QLineEdit:focus {
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    background: rgba(0, 0, 0, 0.5);
+    background: #111111;
+    color: #ffffff;
+    border: 1px solid #333333;
+    padding: 5px 10px;
+    border-radius: 0px;
 }
 QStatusBar {
-    background: rgba(0, 0, 0, 0.2);
-    color: rgba(255, 255, 255, 0.5);
+    background: #000000;
+    color: #666666;
+    border-top: 1px solid #333333;
 }
 QMenu {
-    background: rgba(26, 26, 46, 0.95);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-}
-QMenu::item {
-    padding: 8px 25px;
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid #333333;
 }
 QMenu::item:selected {
-    background: rgba(255, 255, 255, 0.1);
+    background: #333333;
 }
-
-#GlassCard {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px;
+#MinimalCard {
+    background: #000000;
+    border: 1px solid #333333;
+    border-radius: 0px;
 }
-
 #InternalList {
-    background: transparent;
-    border: none;
-    color: white;
-    font-size: 14px;
+    background: #000000;
+    border: 1px solid #333333;
+    color: #ffffff;
 }
+#PrimaryButton, #SecondaryButton, #DangerButton {
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    padding: 8px 15px;
+    border-radius: 0px;
+}
+#PrimaryButton:hover, #SecondaryButton:hover, #DangerButton:hover {
+    background: #ffffff;
+    color: #000000;
+}
+QLabel {
+    color: #ffffff;
+}
+"""
 
-#PrimaryButton {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4facfe, stop:1 #00f2fe);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-weight: bold;
+LIGHT_STYLE = """
+QMainWindow {
+    background: #ffffff;
 }
-#SecondaryButton {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 10px 20px;
-    border-radius: 10px;
+QTabWidget::pane {
+    border: 1px solid #dddddd;
+    background: #ffffff;
 }
-#DangerButton {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ff0844, stop:1 #ffb199);
-    color: white;
+QTabBar::tab {
+    background: #ffffff;
+    color: #888888;
+    padding: 10px 15px;
+    border: 1px solid #dddddd;
+    border-bottom: none;
+    margin-right: 1px;
+}
+QTabBar::tab:selected {
+    background: #f8f8f8;
+    color: #000000;
+    border-top: 2px solid #000000;
+}
+QToolBar {
+    background: #ffffff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-weight: bold;
+    border-bottom: 1px solid #dddddd;
+    padding: 5px;
+    spacing: 5px;
+}
+QLineEdit {
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #cccccc;
+    padding: 5px 10px;
+    border-radius: 0px;
+}
+QStatusBar {
+    background: #ffffff;
+    color: #999999;
+    border-top: 1px solid #dddddd;
+}
+QMenu {
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #dddddd;
+}
+QMenu::item:selected {
+    background: #eeeeee;
+}
+#MinimalCard {
+    background: #ffffff;
+    border: 1px solid #dddddd;
+    border-radius: 0px;
+}
+#InternalList {
+    background: #ffffff;
+    border: 1px solid #dddddd;
+    color: #000000;
+}
+#PrimaryButton, #SecondaryButton, #DangerButton {
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #000000;
+    padding: 8px 15px;
+    border-radius: 0px;
+}
+#PrimaryButton:hover, #SecondaryButton:hover, #DangerButton:hover {
+    background: #000000;
+    color: #ffffff;
+}
+QLabel {
+    color: #000000;
 }
 """

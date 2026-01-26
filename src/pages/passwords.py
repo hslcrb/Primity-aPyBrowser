@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QListWidget, QInputDialog, 
                              QMessageBox, QLineEdit)
 from src.config import TRANSLATIONS
-from src.ui_components import GlassCard
+from src.ui_components import MinimalCard
 
 class PasswordPage(QWidget):
     def __init__(self, main_window, lang='ko'):
@@ -20,7 +20,7 @@ class PasswordPage(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(50, 50, 50, 50)
         
-        card = GlassCard()
+        card = MinimalCard()
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(30, 30, 30, 30)
         
