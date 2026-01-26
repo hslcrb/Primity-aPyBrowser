@@ -53,6 +53,9 @@ class PasswordPage(QWidget):
             if os.path.exists('passwords.json'):
                 with open('passwords.json', 'r') as f:
                     return json.load(f)
+            else:
+                with open('passwords.json', 'w') as f:
+                    json.dump({}, f)
         except:
             pass
         return {}

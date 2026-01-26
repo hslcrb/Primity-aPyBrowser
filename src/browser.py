@@ -54,6 +54,12 @@ class PrimityBrowser(QMainWindow):
         # Custom Title Bar
         self.setup_title_bar()
 
+        # Navigation Bar
+        self.navbar = QToolBar("Navigation")
+        self.navbar.setMovable(False)
+        self.navbar.setIconSize(self.navbar.iconSize() * 0.8)
+        self.main_layout.addWidget(self.navbar)
+
         # Tab Widget
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
@@ -62,14 +68,6 @@ class PrimityBrowser(QMainWindow):
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
         self.main_layout.addWidget(self.tabs)
-
-        # Navigation Bar (As a toolbar but added to layout)
-        self.navbar = QToolBar("Navigation")
-        self.navbar.setMovable(False)
-        self.navbar.setIconSize(self.navbar.iconSize() * 0.8)
-        self.addToolBar(Qt.TopToolBarArea, self.navbar) # This might still work, but layout is safer
-        # Actually, let's keep it as addToolBar for native behavior or add to layout.
-        # Frameless QMainWindow still handles toolbars.
 
         # Apply monochrome theme
         self.apply_theme()
@@ -270,6 +268,9 @@ class PrimityBrowser(QMainWindow):
             if os.path.exists('bookmarks.json'):
                 with open('bookmarks.json', 'r') as f:
                     return json.load(f)
+            else:
+                with open('bookmarks.json', 'w') as f:
+                    json.dump({}, f)
         except:
             pass
         return {}
