@@ -3,7 +3,7 @@ FROM python:3.11
 # Install system dependencies required for QtWebEngine
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx \
+    libgl1 \
     libnss3 \
     libxcomposite1 \
     libxcursor1 \
@@ -12,12 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     libfontconfig1 \
     libxrandr2 \
-    libpangocairo-1.0-0 \
     libpango-1.0-0 \
     libcairo2 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
     libdbus-1-3 \
+    libxkbcommon0 \
     libxkbcommon-x11-0 \
     libxcb-icccm4 \
     libxcb-image0 \
