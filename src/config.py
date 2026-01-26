@@ -22,7 +22,7 @@ TRANSLATIONS = {
         'Confirm Delete': '정말로 삭제하시겠습니까?',
         'App Settings': '앱 설정',
         'Appearance': '디자인',
-        'Browser Name': '프리마이티'
+        'Browser Name': 'Primity 프리마이티'
     },
     'en': {
         'Back': 'Back',
