@@ -23,7 +23,9 @@ TRANSLATIONS = {
         'App Settings': '앱 설정',
         'Appearance': '디자인',
         'Browser Name': 'Primity 프리마이티',
-        'Korean Input': '한글 입력'
+        'Korean Input': '한글 입력',
+        'Keyboard Layout': '키보드 자판 설정',
+        'Dubeolshik': '두벌식 표준'
     },
     'en': {
         'Back': 'Back',
@@ -48,6 +50,8 @@ TRANSLATIONS = {
         'App Settings': 'App Settings',
         'Appearance': 'Appearance',
         'Browser Name': 'Primity',
-        'Korean Input': 'Korean Input'
+        'Korean Input': 'Korean Input',
+        'Keyboard Layout': 'Keyboard Layout',
+        'Dubeolshik': 'Dubeolshik (2-Set)'
     }
 }

@@ -201,15 +201,23 @@ class PrimityBrowser(QMainWindow):
 
     def toggle_internal_ime(self):
         self.kor_input_active = self.ime_btn.isChecked()
-        # Notify all open tabs to toggle their JS IME state
-        script = f"window.dispatchEvent(new CustomEvent('PRIMITY_TOGGLE_IME', {{ detail: {{ active: {str(self.kor_input_active).lower()} }} }}));"
+        self.apply_ime_state()
+        msg = "Korean Input (Internal) ON" if self.kor_input_active else "Korean Input (Internal) OFF"
+        self.status.showMessage(msg, 2000)
+
+    def apply_ime_state(self):
+        # Notify all open tabs to toggle their JS IME state and layout
+        layout = self.settings.value("kbd_layout", "dubeol")
+        script = f"window.dispatchEvent(new CustomEvent('PRIMITY_TOGGLE_IME', {{ detail: {{ active: {str(self.kor_input_active).lower()}, layout: '{layout}' }} }}));"
         for i in range(self.tabs.count()):
             widget = self.tabs.widget(i)
             if isinstance(widget, QWebEngineView):
                 widget.page().runJavaScript(script)
-        
-        msg = "Korean Input (Internal) ON" if self.kor_input_active else "Korean Input (Internal) OFF"
-        self.status.showMessage(msg, 2000)
+
+    def change_kbd_layout(self, layout_id):
+        self.settings.setValue("kbd_layout", layout_id)
+        self.apply_ime_state()
+        self.status.showMessage(f"Keyboard Layout Changed: {layout_id}", 2000)
 
     def create_menu(self):
         menu = QMenu(self)
