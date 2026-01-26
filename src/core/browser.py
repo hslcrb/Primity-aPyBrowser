@@ -57,30 +57,36 @@ class PrimityBrowser(QMainWindow):
         self.main_layout.addWidget(self.navbar) # Keep this line, the snippet's addLayout was incorrect here
         
         # --- Tabs Layout (Inline flow) ---
-        self.tabs_container = QWidget()
-        self.tabs_container.setObjectName("TabsContainer")
-        self.tabs_layout = QHBoxLayout(self.tabs_container)
-        self.tabs_layout.setContentsMargins(5, 0, 0, 0)
-        self.tabs_layout.setSpacing(2)
-
-        # New Tab Button (Inline, before first tab)
-        self.add_tab_btn = QPushButton()
-        self.add_tab_btn.setIcon(self.get_icon("plus"))
-        self.add_tab_btn.setFixedSize(32, 32)
-        self.add_tab_btn.setCursor(Qt.PointingHandCursor)
-        self.add_tab_btn.setObjectName("PrimaryButton")
-        self.add_tab_btn.setStyleSheet("border: none; background: transparent;")
-        self.add_tab_btn.clicked.connect(lambda: self.add_new_tab())
-        self.tabs_layout.addWidget(self.add_tab_btn)
-
-        # Tab Widget
+        # Tab Widget (moved up to be initialized before tabs_layout)
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
         self.tabs.tabBarDoubleClicked.connect(self.tab_open_doubleclick)
         self.tabs.currentChanged.connect(self.current_tab_changed)
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
+
+        # New Tab Button (Will be added after tabs in layout)
+        self.add_tab_btn = QPushButton()
+        self.add_tab_btn.setIcon(self.get_icon("plus"))
+        self.add_tab_btn.setFixedSize(32, 28)
+        self.add_tab_btn.setCursor(Qt.PointingHandCursor)
+        self.add_tab_btn.setObjectName("PrimaryButton")
+        self.add_tab_btn.setStyleSheet("border: none; background: transparent;")
+        self.add_tab_btn.clicked.connect(lambda: self.add_new_tab())
+
+        # --- Tabs Layout (Flowing to the right) ---
+        self.tabs_container = QWidget()
+        self.tabs_container.setObjectName("TabsContainer")
+        self.tabs_layout = QHBoxLayout(self.tabs_container)
+        self.tabs_layout.setContentsMargins(0, 0, 5, 0)
+        self.tabs_layout.setSpacing(0)
+
+        # 1. Tabs First
         self.tabs_layout.addWidget(self.tabs)
+        # 2. Plus Button Second (Appears at cursor position in screenshot)
+        self.tabs_layout.addWidget(self.add_tab_btn)
+        # 3. Stretch to keep them to the left
+        self.tabs_layout.addStretch()
         
         self.main_layout.addWidget(self.tabs_container)
 
@@ -190,8 +196,9 @@ class PrimityBrowser(QMainWindow):
 
         # 2. URL Bar (Expanding)
         self.url_bar = QLineEdit()
+        self.url_bar.setPlaceholderText("Search or enter address")
         self.url_bar.returnPressed.connect(self.navigate_to_url)
-        # Security Icon Only
+        # Security Icon Only (As requested: No more stars here)
         self.security_action = self.url_bar.addAction(self.get_icon("unlock"), QLineEdit.LeadingPosition)
         self.navbar.addWidget(self.url_bar)
 
@@ -473,6 +480,7 @@ class PrimityBrowser(QMainWindow):
             self.bookmark_btn.setIcon(self.get_icon("star"))
 
     def suggest_password(self):
+        from PySide6.QtWidgets import QApplication
         new_pwd = generate_strong_password()
         QApplication.clipboard().setText(new_pwd)
         QMessageBox.information(self, "Password Suggestion", 
