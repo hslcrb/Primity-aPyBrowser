@@ -151,9 +151,8 @@ class PrimityBrowser(QMainWindow):
             self.toggle_maximize()
 
     def get_icon(self, name):
-        # Correct path for modularized structure: src/core/browser.py -> ../../assets/icons/
-        root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        icon_path = os.path.join(root_dir, 'assets', 'icons', f"{name}.svg")
+        # Use simple relative path from CWD (root)
+        icon_path = f"assets/icons/{name}.svg"
         if os.path.exists(icon_path):
             return QIcon(icon_path)
         return QIcon()
@@ -164,30 +163,15 @@ class PrimityBrowser(QMainWindow):
     def init_ui(self):
         self.navbar.clear()
 
-        # Back Button
+        # 1. Navigation Actions (Primary Left)
         back_btn = QAction(self.get_icon("back"), "", self)
         back_btn.triggered.connect(lambda: self.tabs.currentWidget().back() if isinstance(self.tabs.currentWidget(), QWebEngineView) else None)
         self.navbar.addAction(back_btn)
 
-        # Forward Button
         forward_btn = QAction(self.get_icon("forward"), "", self)
         forward_btn.triggered.connect(lambda: self.tabs.currentWidget().forward() if isinstance(self.tabs.currentWidget(), QWebEngineView) else None)
         self.navbar.addAction(forward_btn)
 
-        # URL Bar
-        self.url_bar = QLineEdit()
-        self.url_bar.returnPressed.connect(self.navigate_to_url)
-        
-        # Security Icon (Left)
-        self.security_action = self.url_bar.addAction(self.get_icon("unlock"), QLineEdit.LeadingPosition)
-        
-        # Bookmark Indicator (Right)
-        self.bookmark_toggle_action = self.url_bar.addAction(self.get_icon("star"), QLineEdit.TrailingPosition)
-        self.bookmark_toggle_action.triggered.connect(self.add_bookmark)
-        
-        self.navbar.addWidget(self.url_bar)
-
-        # Home Button
         home_btn = QAction(self.get_icon("home"), "", self)
         home_btn.triggered.connect(self.navigate_home)
         self.navbar.addAction(home_btn)
@@ -196,8 +180,37 @@ class PrimityBrowser(QMainWindow):
         self.reload_btn = QAction(self.get_icon("reload"), "", self)
         self.reload_btn.triggered.connect(self.reload_page)
         self.navbar.addAction(self.reload_btn)
-        
-        # Animation for reload
+
+        # Bookmark Button (Toolbar Only)
+        self.bookmark_btn = QAction(self.get_icon("star"), "", self)
+        self.bookmark_btn.triggered.connect(self.add_bookmark)
+        self.navbar.addAction(self.bookmark_btn)
+
+        # 2. URL Bar (Expanding)
+        self.url_bar = QLineEdit()
+        self.url_bar.returnPressed.connect(self.navigate_to_url)
+        # Security Icon Only
+        self.security_action = self.url_bar.addAction(self.get_icon("unlock"), QLineEdit.LeadingPosition)
+        self.navbar.addWidget(self.url_bar)
+
+        # 3. Secondary Actions (Right)
+        # Internal Korean Input Button
+        self.ime_btn = QPushButton(self.tr_text("Korean Input"))
+        self.ime_btn.setCheckable(True)
+        self.ime_btn.setObjectName("PrimaryButton")
+        self.ime_btn.setFixedSize(90, 32)
+        self.ime_btn.clicked.connect(self.toggle_internal_ime)
+        self.navbar.addWidget(self.ime_btn)
+
+        # Menu Button
+        self.menu_btn_widget = QPushButton()
+        self.menu_btn_widget.setIcon(self.get_icon("menu"))
+        self.menu_btn_widget.setFixedSize(32, 32)
+        self.menu_btn_widget.setObjectName("SecondaryButton")
+        self.menu_btn_widget.setMenu(self.create_menu())
+        self.navbar.addWidget(self.menu_btn_widget)
+
+        # Animation Setup
         self.reload_angle = 0
         self.reload_timer = QVariantAnimation(self)
         self.reload_timer.setStartValue(0)
@@ -205,27 +218,6 @@ class PrimityBrowser(QMainWindow):
         self.reload_timer.setDuration(1000)
         self.reload_timer.setLoopCount(-1)
         self.reload_timer.valueChanged.connect(self.animate_reload)
-
-        # Bookmark Button
-        self.bookmark_btn = QAction(self.get_icon("star"), "", self)
-        self.bookmark_btn.triggered.connect(self.add_bookmark)
-        self.navbar.addAction(self.bookmark_btn)
-
-        # Internal Korean Input Button (Fixed Toggle)
-        self.ime_btn = QPushButton(self.tr_text("Korean Input"))
-        self.ime_btn.setCheckable(True)
-        self.ime_btn.setObjectName("PrimaryButton")
-        self.ime_btn.setFixedSize(90, 36)
-        self.ime_btn.clicked.connect(self.toggle_internal_ime)
-        self.navbar.addWidget(self.ime_btn)
-
-        # Menu Button
-        self.menu_btn_widget = QPushButton()
-        self.menu_btn_widget.setIcon(self.get_icon("menu"))
-        self.menu_btn_widget.setFixedSize(36, 36)
-        self.menu_btn_widget.setObjectName("SecondaryButton")
-        self.menu_btn_widget.setMenu(self.create_menu())
-        self.navbar.addWidget(self.menu_btn_widget)
 
         # Add initial tab if none
         if self.tabs.count() == 0:
@@ -474,10 +466,8 @@ class PrimityBrowser(QMainWindow):
                 break
         
         if is_bookmarked:
-            self.bookmark_toggle_action.setIcon(self.get_icon("star_yellow"))
             self.bookmark_btn.setIcon(self.get_icon("star_yellow"))
         else:
-            self.bookmark_toggle_action.setIcon(self.get_icon("star"))
             self.bookmark_btn.setIcon(self.get_icon("star"))
 
     def suggest_password(self):
