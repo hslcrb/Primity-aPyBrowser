@@ -57,15 +57,16 @@ class PrimityBrowser(QMainWindow):
         self.main_layout.addWidget(self.navbar) # Keep this line, the snippet's addLayout was incorrect here
         
         # --- Tabs Layout (Inline flow) ---
-        # Tab Widget (moved up to be initialized before tabs_layout)
+        # Tab Widget
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
         self.tabs.tabBarDoubleClicked.connect(self.tab_open_doubleclick)
         self.tabs.currentChanged.connect(self.current_tab_changed)
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
+        self.tabs.tabBar().setExpanding(False) # Keep tabs to the left
 
-        # New Tab Button (Will be added after tabs in layout)
+        # New Tab Button (Inline, after last tab)
         self.add_tab_btn = QPushButton()
         self.add_tab_btn.setIcon(self.get_icon("plus"))
         self.add_tab_btn.setFixedSize(32, 28)
@@ -74,19 +75,16 @@ class PrimityBrowser(QMainWindow):
         self.add_tab_btn.setStyleSheet("border: none; background: transparent;")
         self.add_tab_btn.clicked.connect(lambda: self.add_new_tab())
 
-        # --- Tabs Layout (Flowing to the right) ---
+        # --- Tabs Layout (Tabs -> Plus -> Stretch) ---
         self.tabs_container = QWidget()
         self.tabs_container.setObjectName("TabsContainer")
         self.tabs_layout = QHBoxLayout(self.tabs_container)
-        self.tabs_layout.setContentsMargins(0, 0, 5, 0)
+        self.tabs_layout.setContentsMargins(0, 0, 0, 0)
         self.tabs_layout.setSpacing(0)
 
-        # 1. Tabs First
         self.tabs_layout.addWidget(self.tabs)
-        # 2. Plus Button Second (Appears at cursor position in screenshot)
         self.tabs_layout.addWidget(self.add_tab_btn)
-        # 3. Stretch to keep them to the left
-        self.tabs_layout.addStretch()
+        self.tabs_layout.addStretch() # Pushes tabs and plus button to the LEFT
         
         self.main_layout.addWidget(self.tabs_container)
 
@@ -198,7 +196,7 @@ class PrimityBrowser(QMainWindow):
         self.url_bar = QLineEdit()
         self.url_bar.setPlaceholderText("Search or enter address")
         self.url_bar.returnPressed.connect(self.navigate_to_url)
-        # Security Icon Only (As requested: No more stars here)
+        # Only Lock Icon allowed here
         self.security_action = self.url_bar.addAction(self.get_icon("unlock"), QLineEdit.LeadingPosition)
         self.navbar.addWidget(self.url_bar)
 
