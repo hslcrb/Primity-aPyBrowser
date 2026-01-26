@@ -9,7 +9,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
 from src.config import TRANSLATIONS
-from src.ui_components import DARK_STYLE, LIGHT_STYLE
+from src.ui_components import get_stylesheet
 from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
 from src.utils import generate_strong_password
@@ -103,12 +103,11 @@ class PrimityBrowser(QMainWindow):
         self.max_btn.clicked.connect(self.toggle_maximize)
         title_layout.addWidget(self.max_btn)
         
-        close_btn = QPushButton()
-        close_btn.setIcon(self.get_icon("close"))
-        close_btn.setProperty("class", "WindowButton")
-        close_btn.setObjectName("CloseButton")
-        close_btn.clicked.connect(self.close)
-        title_layout.addWidget(close_btn)
+        self.close_btn = QPushButton()
+        self.close_btn.setObjectName("CloseButton")
+        self.close_btn.setProperty("class", "WindowButton")
+        self.close_btn.clicked.connect(self.close)
+        title_layout.addWidget(self.close_btn)
         
         self.main_layout.addWidget(self.title_bar)
 
@@ -197,10 +196,11 @@ class PrimityBrowser(QMainWindow):
         self.setStatusBar(self.status)
 
     def apply_theme(self):
-        if self.current_theme == "dark":
-            self.setStyleSheet(DARK_STYLE)
-        else:
-            self.setStyleSheet(LIGHT_STYLE)
+        self.setStyleSheet(get_stylesheet(self.current_theme))
+        # Update title bar icons that change based on theme contrast requirements
+        if hasattr(self, 'close_btn'):
+            icon_name = "close_black" if self.current_theme == "dark" else "close_white"
+            self.close_btn.setIcon(self.get_icon(icon_name))
 
     def create_menu(self):
         menu = QMenu(self)

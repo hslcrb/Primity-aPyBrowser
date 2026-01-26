@@ -5,16 +5,43 @@ class MinimalCard(QFrame):
         super().__init__(parent)
         self.setObjectName("MinimalCard")
 
-DARK_STYLE = """
+# Theme color variables
+DARK_VARS = {
+    "--bg": "#000000",
+    "--fg": "#ffffff",
+    "--gray": "#888888",
+    "--dark-gray": "#333333",
+    "--border": "#222222",
+    "--hover": "#222222",
+    "--input-bg": "#111111",
+    "--close-bg": "#ffffff",
+    "--close-hover": "#ff5f56", # Slight red on hover for close
+    "--danger": "#e81123"
+}
+
+LIGHT_VARS = {
+    "--bg": "#ffffff",
+    "--fg": "#000000",
+    "--gray": "#888888",
+    "--dark-gray": "#cccccc",
+    "--border": "#eeeeee",
+    "--hover": "#eeeeee",
+    "--input-bg": "#ffffff",
+    "--close-bg": "#000000",
+    "--close-hover": "#e81123",
+    "--danger": "#e81123"
+}
+
+BASE_STYLE = """
 QMainWindow {
-    background: #000000;
+    background: var(--bg);
 }
 #TitleBar {
-    background: #000000;
-    border-bottom: 1px solid #222222;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
 }
 #WindowTitle {
-    color: #888888;
+    color: var(--gray);
     font-size: 12px;
     padding-left: 10px;
 }
@@ -25,39 +52,42 @@ QPushButton[class="WindowButton"] {
     height: 30px;
 }
 QPushButton[class="WindowButton"]:hover {
-    background: #222222;
+    background: var(--hover);
+}
+QPushButton#CloseButton {
+    background: var(--close-bg);
 }
 QPushButton#CloseButton:hover {
-    background: #e81123;
+    background: var(--danger);
 }
 QTabWidget::pane {
-    border: 1px solid #333333;
-    background: #000000;
+    border: 1px solid var(--dark-gray);
+    background: var(--bg);
 }
 QTabBar::tab {
-    background: #000000;
-    color: #888888;
+    background: var(--bg);
+    color: var(--gray);
     padding: 10px 15px;
-    border: 1px solid #333333;
+    border: 1px solid var(--dark-gray);
     border-bottom: none;
     margin-right: 1px;
 }
 QTabBar::tab:selected {
-    background: #111111;
-    color: #ffffff;
-    border-top: 2px solid #ffffff;
+    background: var(--input-bg);
+    color: var(--fg);
+    border-top: 2px solid var(--fg);
 }
 QToolBar {
-    background: #000000;
+    background: var(--bg);
     border: none;
-    border-bottom: 1px solid #333333;
+    border-bottom: 1px solid var(--dark-gray);
     padding: 5px;
     spacing: 5px;
 }
 QLineEdit {
-    background: #111111;
-    color: #ffffff;
-    border: 1px solid #333333;
+    background: var(--input-bg);
+    color: var(--fg);
+    border: 1px solid var(--dark-gray);
     padding: 5px 10px;
     border-radius: 0px;
 }
@@ -68,153 +98,53 @@ QToolButton {
     margin: 1px;
 }
 QToolButton:hover {
-    background: #222222;
+    background: var(--hover);
 }
 QToolButton:pressed {
-    background: #333333;
+    background: var(--dark-gray);
 }
 QStatusBar {
-    background: #000000;
-    color: #666666;
-    border-top: 1px solid #333333;
+    background: var(--bg);
+    color: var(--gray);
+    border-top: 1px solid var(--dark-gray);
 }
 QMenu {
-    background: #000000;
-    color: #ffffff;
-    border: 1px solid #333333;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--dark-gray);
 }
 QMenu::item:selected {
-    background: #333333;
+    background: var(--dark-gray);
 }
 #MinimalCard {
-    background: #000000;
-    border: 1px solid #333333;
+    background: var(--bg);
+    border: 1px solid var(--dark-gray);
     border-radius: 0px;
 }
 #InternalList {
-    background: #000000;
-    border: 1px solid #333333;
-    color: #ffffff;
+    background: var(--bg);
+    border: 1px solid var(--dark-gray);
+    color: var(--fg);
 }
 #PrimaryButton, #SecondaryButton, #DangerButton {
-    background: #000000;
-    color: #ffffff;
-    border: 1px solid #333333;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--dark-gray);
     padding: 8px 15px;
     border-radius: 0px;
 }
 #PrimaryButton:hover, #SecondaryButton:hover, #DangerButton:hover {
-    background: #222222;
-    border: 1px solid #aaaaaa;
+    background: var(--hover);
+    border: 1px solid var(--gray);
 }
 QLabel {
-    color: #ffffff;
+    color: var(--fg);
 }
 """
 
-LIGHT_STYLE = """
-QMainWindow {
-    background: #ffffff;
-}
-#TitleBar {
-    background: #ffffff;
-    border-bottom: 1px solid #eeeeee;
-}
-#WindowTitle {
-    color: #888888;
-    font-size: 12px;
-    padding-left: 10px;
-}
-QPushButton[class="WindowButton"] {
-    background: transparent;
-    border: none;
-    width: 45px;
-    height: 30px;
-}
-QPushButton[class="WindowButton"]:hover {
-    background: #eeeeee;
-}
-QPushButton#CloseButton:hover {
-    background: #e81123;
-}
-QTabWidget::pane {
-    border: 1px solid #dddddd;
-    background: #ffffff;
-}
-QTabBar::tab {
-    background: #ffffff;
-    color: #888888;
-    padding: 10px 15px;
-    border: 1px solid #dddddd;
-    border-bottom: none;
-    margin-right: 1px;
-}
-QTabBar::tab:selected {
-    background: #f8f8f8;
-    color: #000000;
-    border-top: 2px solid #000000;
-}
-QToolBar {
-    background: #ffffff;
-    border: none;
-    border-bottom: 1px solid #dddddd;
-    padding: 5px;
-    spacing: 5px;
-}
-QLineEdit {
-    background: #ffffff;
-    color: #000000;
-    border: 1px solid #cccccc;
-    padding: 5px 10px;
-    border-radius: 0px;
-}
-QToolButton {
-    background: transparent;
-    border: none;
-    padding: 6px;
-    margin: 1px;
-}
-QToolButton:hover {
-    background: #eeeeee;
-}
-QToolButton:pressed {
-    background: #dddddd;
-}
-QStatusBar {
-    background: #ffffff;
-    color: #999999;
-    border-top: 1px solid #dddddd;
-}
-QMenu {
-    background: #ffffff;
-    color: #000000;
-    border: 1px solid #dddddd;
-}
-QMenu::item:selected {
-    background: #eeeeee;
-}
-#MinimalCard {
-    background: #ffffff;
-    border: 1px solid #dddddd;
-    border-radius: 0px;
-}
-#InternalList {
-    background: #ffffff;
-    border: 1px solid #dddddd;
-    color: #000000;
-}
-#PrimaryButton, #SecondaryButton, #DangerButton {
-    background: #ffffff;
-    color: #000000;
-    border: 1px solid #dddddd;
-    padding: 8px 15px;
-    border-radius: 0px;
-}
-#PrimaryButton:hover, #SecondaryButton:hover, #DangerButton:hover {
-    background: #f0f0f0;
-    border: 1px solid #555555;
-}
-QLabel {
-    color: #000000;
-}
-"""
+def get_stylesheet(theme="dark"):
+    vars_dict = DARK_VARS if theme == "dark" else LIGHT_VARS
+    style = BASE_STYLE
+    for key, value in vars_dict.items():
+        style = style.replace(f"var({key})", value)
+    return style
