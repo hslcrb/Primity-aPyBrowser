@@ -31,16 +31,13 @@ class ArchiveSchemeHandler(QWebEngineUrlSchemeHandler):
         self.manager = manager
 
     def requestStarted(self, job: QWebEngineUrlRequestJob):
-        path = job.requestUrl().path()
-        # URL format: primity-archive://<snap_id>/<file_path>
-        parts = path.strip('/').split('/', 1)
-        if len(parts) < 1:
-            job.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
-            return
-            
-        snap_id = parts[0]
-        file_subpath = parts[1] if len(parts) > 1 else "index.html"
+        url = job.requestUrl()
+        snap_id = url.host()
+        file_subpath = url.path().strip('/')
         
+        if not file_subpath:
+            file_subpath = "index.html"
+            
         full_path = Path(self.manager.get_snapshot_path(snap_id)) / file_subpath
         if full_path.exists() and full_path.is_file():
             # Determine content type (simple)
@@ -834,15 +831,16 @@ class PrimityBrowser(QMainWindow):
             # Auto Archive Hook
             view.loadFinished.connect(lambda ok, b=view: self.handle_auto_archive(ok, b))
             
-            # Replay Mocking Hook (For local archive files)
-            def inject_replay_if_local(ok, browser):
-                if ok and browser.url().isLocalFile() and "/data/archive/" in browser.url().toString():
+            # Replay Mocking Hook (For Archive Files via Virtual Scheme)
+            def inject_replay_if_archive(ok, browser):
+                url_str = browser.url().toString()
+                if ok and (browser.url().isLocalFile() or url_str.startswith("primity-archive://")):
                     replay_path = os.path.join(os.getcwd(), 'assets', 'archive_replay.js')
                     if os.path.exists(replay_path):
                         with open(replay_path, 'r') as f:
                             browser.page().runJavaScript(f.read())
             
-            view.loadFinished.connect(lambda ok, b=view: inject_replay_if_local(ok, b))
+            view.loadFinished.connect(lambda ok, b=view: inject_replay_if_archive(ok, b))
             
             # Favicon Support
             view.iconChanged.connect(lambda icon, browser=view:
