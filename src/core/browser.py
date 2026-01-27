@@ -16,6 +16,7 @@ from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
 from src.pages.archive_dashboard import ArchiveDashboard
 from src.ui.archive_config import ArchiveConfigDialog
+from src.ui.hangul_lineedit import HangulLineEdit
 from src.utils.helpers import generate_strong_password
 from src.core.ime_manager import IMEManager
 from src.core.archive_manager import ArchiveManager
@@ -177,12 +178,12 @@ class PrimityBrowser(QMainWindow):
         self.bookmark_btn.triggered.connect(self.add_bookmark)
         self.navbar.addAction(self.bookmark_btn)
 
-        # 2. URL Bar (Expanding)
-        self.url_bar = QLineEdit()
+        # 2. URL Bar (Expanding) - 한글 입력 지원
+        self.url_bar = HangulLineEdit()
         self.url_bar.setPlaceholderText("Search or enter address")
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         # Only Lock Icon allowed here
-        self.security_action = self.url_bar.addAction(self.get_icon("unlock"), QLineEdit.LeadingPosition)
+        self.security_action = self.url_bar.addAction(self.get_icon("unlock"), HangulLineEdit.LeadingPosition)
         self.navbar.addWidget(self.url_bar)
 
         # Archive (REC) Button - Placed right after URL Bar
@@ -245,6 +246,8 @@ class PrimityBrowser(QMainWindow):
     def toggle_internal_ime(self):
         self.kor_input_active = self.ime.toggle()
         self.ime_btn.setChecked(self.kor_input_active)
+        # 주소창에도 한글 모드 적용
+        self.url_bar.set_hangul_active(self.kor_input_active)
         msg = "Korean Input (Internal) ON" if self.kor_input_active else "Korean Input (Internal) OFF"
         self.status.showMessage(msg, 2000)
 
