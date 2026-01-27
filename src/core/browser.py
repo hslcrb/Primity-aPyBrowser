@@ -683,6 +683,7 @@ class PrimityBrowser(QMainWindow):
             # Additional settings for focus and input compatibility
             widget.settings().setAttribute(QWebEngineSettings.WebAttribute.FocusOnNavigationEnabled, True)
             widget.settings().setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
             widget.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
             widget.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
             widget.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)

@@ -225,6 +225,13 @@ class ArchiveManager(QObject):
         except:
             pass
 
+    def _on_finished(self, success, msg):
+        self.is_recording = False
+        if success:
+            self.status_msg.emit(f"✅ {msg}")
+        else:
+            self.status_msg.emit(f"❌ Error: {msg}")
+
     @Slot()
     def stop_recording(self):
         self.is_recording = False

@@ -33,6 +33,7 @@ def main():
     sys.argv.append("--disable-web-security")
     sys.argv.append("--allow-running-insecure-content")
     sys.argv.append("--autoplay-policy=no-user-gesture-required")
+    sys.argv.append("--allow-file-access-from-files")
     
     app = QApplication(sys.argv)
     app.setApplicationName("Primity")
