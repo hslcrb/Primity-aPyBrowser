@@ -29,29 +29,6 @@
     };
     globalThis.Math.random = () => 0.5;
 
-    // 3. REC UI (Breathing Border) - Trusted Types safe
-    const setupUI = () => {
-        if (document.getElementById('primity-rec-indicator')) return;
-        const style = document.createElement('style');
-        style.id = 'primity-rec-indicator';
-        style.textContent = `
-            @keyframes primity-breathing {
-                0% { box-shadow: inset 0 0 15px rgba(211, 47, 47, 0.4); border-color: rgba(211, 47, 47, 0.3); }
-                50% { box-shadow: inset 0 0 35px rgba(211, 47, 47, 0.9); border-color: rgba(211, 47, 47, 1); }
-                100% { box-shadow: inset 0 0 15px rgba(211, 47, 47, 0.4); border-color: rgba(211, 47, 47, 0.3); }
-            }
-            :root {
-                border: 5px solid rgba(211, 47, 47, 0.5) !important;
-                animation: primity-breathing 2.5s infinite ease-in-out !important;
-                box-sizing: border-box !important;
-                min-height: 100vh !important;
-            }
-        `;
-        document.head.appendChild(style);
-    };
-    if (document.head) setupUI();
-    else document.addEventListener('DOMContentLoaded', setupUI);
-
     // 4. Data Vacuum (Qt WebChannel)
     function initVacuum() {
         if (typeof qt !== 'undefined' && typeof QWebChannel !== 'undefined') {

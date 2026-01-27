@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QMainWindow, QToolBar, QLineEdit, QTabWidget,
                              QStatusBar, QPushButton, QMenu, QMessageBox, QVBoxLayout, 
                              QWidget, QHBoxLayout, QLabel, QFileDialog, QInputDialog, QDialog,
                              QToolButton)
-from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot, QPoint, QPropertyAnimation, QVariantAnimation
+from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot, QPoint, QPropertyAnimation, QVariantAnimation, QEasingCurve
 from PySide6.QtGui import QAction, QIcon, QPixmap, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
@@ -21,6 +21,50 @@ from src.ui.hangul_lineedit import HangulLineEdit
 from src.utils.helpers import generate_strong_password
 from src.core.ime_manager import IMEManager
 from src.core.archive_manager import ArchiveManager
+from PySide6.QtGui import QPainter, QColor, QPen
+
+class RecordingContainer(QWidget):
+    """Native Qt container that provides a breathing red border during REC mode."""
+    def __init__(self, browser_view, manager):
+        super().__init__()
+        self.browser_view = browser_view
+        self.manager = manager
+        self.glow_opacity = 0.4
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(browser_view)
+        
+        # Animation for breathing effect
+        self.anim = QVariantAnimation(self)
+        self.anim.setDuration(2500)
+        self.anim.setStartValue(0.4)
+        self.anim.setEndValue(1.0)
+        self.anim.setLoopCount(-1)
+        self.anim.setEasingCurve(QEasingCurve.InOutSine)
+        self.anim.valueChanged.connect(self._update_glow)
+        
+    def _update_glow(self, val):
+        self.glow_opacity = val
+        self.update()
+
+    def paintEvent(self, event):
+        if self.manager.is_recording:
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            
+            # Draw breathing border
+            color = QColor(211, 47, 47, int(255 * self.glow_opacity))
+            pen = QPen(color, 8)
+            painter.setPen(pen)
+            painter.drawRect(self.rect().adjusted(4, 4, -4, -4))
+            
+    def set_recording(self, active):
+        if active:
+            self.anim.start()
+        else:
+            self.anim.stop()
+            self.update()
 
 
 class PrimityBrowser(QMainWindow):
@@ -594,6 +638,35 @@ class PrimityBrowser(QMainWindow):
         QMessageBox.information(self, "Password Suggestion", 
                                 f"Detected password field.\nSuggested strong password has been copied to clipboard:\n\n{new_pwd}")
 
+    def toggle_recording(self, options=None):
+        if self.archiver.is_recording:
+            self.archiver.stop_recording()
+            self.toggle_persistent_hooks(False)
+            self.rec_btn.setIcon(self.get_icon("circle_red"))
+            self.rec_btn.setToolTip("Start Archiving (REC)")
+            self.status.showMessage("Archiving Stopped", 2000)
+        else:
+            # Check current view
+            current_tab = self.tabs.currentWidget()
+            current_url = "about:blank"
+            browser_view = None
+            
+            if isinstance(current_tab, RecordingContainer):
+                browser_view = current_tab.browser_view
+                current_url = browser_view.url().toString()
+                
+            self.archiver.start_recording(current_url, "User Session", options, browser_view=browser_view)
+            self.toggle_persistent_hooks(True)
+            self.rec_btn.setIcon(self.get_icon("circle_white"))
+            self.rec_btn.setToolTip("Stop Archiving")
+            self.status.showMessage("Archiving Started...", 2000)
+
+        # Notify all containers to update UI
+        for i in range(self.tabs.count()):
+            w = self.tabs.widget(i)
+            if isinstance(w, RecordingContainer):
+                w.set_recording(self.archiver.is_recording)
+
     def open_url(self, url):
         self.add_new_tab(QUrl(url))
 
@@ -619,32 +692,6 @@ class PrimityBrowser(QMainWindow):
             script.setRunsOnSubFrames(True)
             profile.scripts().insert(script)
 
-    def toggle_recording(self, options=None):
-        if self.archiver.is_recording:
-            self.archiver.stop_recording()
-            self.toggle_persistent_hooks(False)
-            self.rec_btn.setIcon(self.get_icon("circle_red"))
-            self.rec_btn.setToolTip("Start Archiving (REC)")
-            self.status.showMessage("Archiving Stopped", 2000)
-        else:
-            current_url = "about:blank"
-            if isinstance(self.tabs.currentWidget(), QWebEngineView):
-                current_url = self.tabs.currentWidget().url().toString()
-                
-            curr = self.tabs.currentWidget()
-            browser_view = curr if isinstance(curr, QWebEngineView) else None
-            
-            self.archiver.start_recording(current_url, "User Session", options, browser_view=browser_view)
-            self.toggle_persistent_hooks(True)
-            self.rec_btn.setIcon(self.get_icon("circle_white"))
-            self.rec_btn.setToolTip("Stop Archiving")
-            self.status.showMessage("Archiving Started...", 2000)
-            
-            # Inject script into current page immediately
-            curr = self.tabs.currentWidget()
-            if isinstance(curr, QWebEngineView):
-                self.inject_archiver(curr)
-
     def open_archive_config(self):
         dlg = ArchiveConfigDialog(self, lang=self.current_lang)
         if dlg.exec():
@@ -657,6 +704,11 @@ class PrimityBrowser(QMainWindow):
             if not url.startswith("about:") and not url.startswith("primity:"):
                 self.archiver.start_recording(url, browser.title(), browser_view=browser)
                 self.status.showMessage(f"Auto-Archiving: {browser.title()}...", 3000)
+                # Ensure UI border on auto-archive
+                for i in range(self.tabs.count()):
+                    w = self.tabs.widget(i)
+                    if isinstance(w, RecordingContainer):
+                        w.set_recording(True)
 
     def inject_archiver(self, browser):
         script = self.archiver.get_injection_script()
@@ -672,22 +724,28 @@ class PrimityBrowser(QMainWindow):
         else:
             if qurl is None:
                 qurl = QUrl('https://www.google.com')
-            widget = QWebEngineView()
-            widget.setAttribute(Qt.WA_InputMethodEnabled, True)
+            
+            view = QWebEngineView()
+            view.setAttribute(Qt.WA_InputMethodEnabled, True)
+            
+            # Wrap with Recording Container
+            widget = RecordingContainer(view, self.archiver)
+            if self.archiver.is_recording:
+                widget.set_recording(True)
             
             # Setup WebChannel for data vacuuming
-            channel = QWebChannel(widget.page())
-            widget.page().setWebChannel(channel)
+            channel = QWebChannel(view.page())
+            view.page().setWebChannel(channel)
             channel.registerObject("primity_recorder", self.archiver.recorder)
             
             # Additional settings for focus and input compatibility
-            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.FocusOnNavigationEnabled, True)
-            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
-            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
-            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
-            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
-            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
-            widget.settings().setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, True)
+            view.settings().setAttribute(QWebEngineSettings.WebAttribute.FocusOnNavigationEnabled, True)
+            view.settings().setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+            view.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+            view.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+            view.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+            view.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
+            view.settings().setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, True)
             
             # Simple script to detect password focus and log to console
             detection_script = """
@@ -699,7 +757,7 @@ class PrimityBrowser(QMainWindow):
             """
             
             # Software IME Integration
-            self.ime.inject_script(widget)
+            self.ime.inject_script(view)
             
             # Archiver Integration
             # We inject script on load finished to ensure context is ready, 
@@ -709,12 +767,12 @@ class PrimityBrowser(QMainWindow):
                 # Note: To capture early requests, we really need QWebEngineScript/UserScripts.
                 # runJavaScript is late-bound. 
                 # But for our 'current view' strategy, re-injecting on load is okay for user actions.
-                widget.loadFinished.connect(lambda _, b=widget: self.inject_archiver(b))
+                view.loadFinished.connect(lambda _, b=view: self.inject_archiver(b))
 
             # Connect reload state triggers
-            widget.loadStarted.connect(lambda b=widget: self.start_reload_anim(b))
-            widget.loadFinished.connect(lambda _, b=widget: self.stop_reload_anim(b))
-            widget.urlChanged.connect(lambda _, b=widget: self.update_bookmark_indicator())
+            view.loadStarted.connect(lambda b=view: self.start_reload_anim(b))
+            view.loadFinished.connect(lambda _, b=view: self.stop_reload_anim(b))
+            view.urlChanged.connect(lambda _, b=view: self.update_bookmark_indicator())
 
             # Handle notification via console messages
             def handle_console_message(level, message, line, source):
@@ -726,17 +784,17 @@ class PrimityBrowser(QMainWindow):
                     self.ime.active = active # Sync manager state
                     self.ime_btn.setChecked(active)
             
-            widget.page().javaScriptConsoleMessage = handle_console_message
+            view.page().javaScriptConsoleMessage = handle_console_message
 
-            widget.setUrl(qurl)
-            widget.urlChanged.connect(lambda qurl, browser=widget: self.update_url_bar(qurl, browser))
-            widget.loadFinished.connect(lambda _, browser=widget: 
-                                         self.tabs.setTabText(self.tabs.indexOf(browser), browser.title()))
-            widget.titleChanged.connect(lambda title, browser=widget:
-                                         self.tabs.setTabText(self.tabs.indexOf(browser), title))
+            view.setUrl(qurl)
+            view.urlChanged.connect(lambda qurl, browser=view: self.update_url_bar(qurl, browser))
+            view.loadFinished.connect(lambda _, browser=view: 
+                                         self.tabs.setTabText(self.tabs.indexOf(widget), browser.title()))
+            view.titleChanged.connect(lambda title, browser=view:
+                                         self.tabs.setTabText(self.tabs.indexOf(widget), title))
             
             # Auto Archive Hook
-            widget.loadFinished.connect(lambda ok, b=widget: self.handle_auto_archive(ok, b))
+            view.loadFinished.connect(lambda ok, b=view: self.handle_auto_archive(ok, b))
             
             # Replay Mocking Hook (For local archive files)
             def inject_replay_if_local(ok, browser):
@@ -746,17 +804,17 @@ class PrimityBrowser(QMainWindow):
                         with open(replay_path, 'r') as f:
                             browser.page().runJavaScript(f.read())
             
-            widget.loadFinished.connect(lambda ok, b=widget: inject_replay_if_local(ok, b))
+            view.loadFinished.connect(lambda ok, b=view: inject_replay_if_local(ok, b))
             
             # Favicon Support
-            widget.iconChanged.connect(lambda icon, browser=widget:
-                                       self.tabs.setTabIcon(self.tabs.indexOf(browser), icon))
+            view.iconChanged.connect(lambda icon, browser=view:
+                                       self.tabs.setTabIcon(self.tabs.indexOf(widget), icon))
             
         i = self.tabs.addTab(widget, label)
         self.tabs.setCurrentIndex(i)
 
         # Set default icon for web pages if newly created
-        if isinstance(widget, QWebEngineView):
+        if isinstance(widget, RecordingContainer):
             self.tabs.setTabIcon(i, self.get_icon("globe"))
 
     def tab_open_doubleclick(self, i):
