@@ -72,8 +72,48 @@ class ArchiveManager(QObject):
         super().__init__()
         self.is_recording = False
         self.worker = None
-        self.db_path = Path(__file__).parent.parent.parent / 'data' / 'index.sqlite3'
+        self.worker = None
+        
+        # Load custom path from .env or settings (managed via .env for docker)
+        self.project_root = Path(__file__).parent.parent.parent
+        self.data_dir = self._load_data_dir()
+        self.db_path = self.data_dir / 'index.sqlite3'
+        
         self._ensure_docker_container()
+
+    def _load_data_dir(self):
+        """Load data directory from .env or default."""
+        env_path = self.project_root / '.env'
+        if env_path.exists():
+            with open(env_path, 'r') as f:
+                for line in f:
+                    if line.startswith('ARCHIVE_DATA_DIR='):
+                        path_str = line.split('=', 1)[1].strip()
+                        return Path(path_str)
+        return self.project_root / 'data'
+
+    def update_storage_path(self, new_path):
+        """Update storage path and restart container."""
+        new_dir = Path(new_path)
+        if not new_dir.exists():
+            return
+            
+        # Write to .env
+        env_path = self.project_root / '.env'
+        with open(env_path, 'w') as f:
+            f.write(f"ARCHIVE_DATA_DIR={new_dir.absolute()}\n")
+            
+        self.data_dir = new_dir
+        self.db_path = self.data_dir / 'index.sqlite3'
+        
+        self.status_msg.emit("Restarting ArchiveBox with new storage...")
+        
+        # Restart Docker
+        try:
+            subprocess.run(["docker-compose", "down"], cwd=str(self.project_root), check=True)
+            subprocess.Popen(["docker-compose", "up", "-d"], cwd=str(self.project_root))
+        except Exception as e:
+            print(f"[ArchiveManager] Restart Error: {e}")
 
     def _ensure_docker_container(self):
         """Ensure Docker container is running."""

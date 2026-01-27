@@ -110,6 +110,34 @@ class SettingsPage(QWidget):
         data_layout.addLayout(btn_layout)
         
         layout.addWidget(data_card)
+
+        # --- ARCHIVE SETTINGS ---
+        arc_card = MinimalCard()
+        arc_layout = QVBoxLayout(arc_card)
+        arc_layout.setContentsMargins(30, 30, 30, 30)
+        
+        arc_title = QLabel("Archive Settings")
+        arc_title.setStyleSheet("font-size: 20px; font-weight: bold; color: white; margin-bottom: 10px;")
+        arc_layout.addWidget(arc_title)
+        
+        # Storage Path
+        path_label = QLabel("Storage Path (Requires Restart)")
+        path_label.setStyleSheet("color: #888; font-size: 13px; margin-top: 10px;")
+        arc_layout.addWidget(path_label)
+        
+        path_layout = QHBoxLayout()
+        self.path_edit = QLineEdit()
+        self.path_edit.setText(self.main_window.settings.value("archive_path", "data"))
+        self.path_edit.setReadOnly(True)
+        path_layout.addWidget(self.path_edit)
+        
+        path_btn = QPushButton("Change...")
+        path_btn.setObjectName("SecondaryButton")
+        path_btn.clicked.connect(self.change_archive_path)
+        path_layout.addWidget(path_btn)
+        
+        arc_layout.addLayout(path_layout)
+        layout.addWidget(arc_card)
         
         # --- SYSTEM ---
         sys_card = MinimalCard()
@@ -133,3 +161,11 @@ class SettingsPage(QWidget):
     def kbd_changed(self, index):
         layout_id = self.kbd_box.itemData(index)
         self.main_window.change_kbd_layout(layout_id)
+
+    def change_archive_path(self):
+        from PySide6.QtWidgets import QFileDialog
+        path = QFileDialog.getExistingDirectory(self, "Select Archive Data Directory")
+        if path:
+            self.path_edit.setText(path)
+            self.main_window.settings.setValue("archive_path", path)
+            self.main_window.archiver.update_storage_path(path)

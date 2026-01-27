@@ -10,4 +10,4 @@ services:
       - ALLOWED_HOSTS=*
       - MEDIA_MAX_SIZE=750m
     volumes:
-      - ./data:/data
+      - ${ARCHIVE_DATA_DIR:-./data}:/data

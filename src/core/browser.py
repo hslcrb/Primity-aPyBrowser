@@ -210,7 +210,18 @@ class PrimityBrowser(QMainWindow):
         rec_menu.addAction(adv_action)
         self.rec_btn.setMenu(rec_menu)
         
+        self.rec_btn.setMenu(rec_menu)
         self.navbar.addWidget(self.rec_btn)
+
+        # Auto Archive Toggle
+        self.auto_rec_btn = QPushButton("Auto")
+        self.auto_rec_btn.setCheckable(True)
+        self.auto_rec_btn.setToolTip("Enable Auto-Archiving on page load")
+        self.auto_rec_btn.setStyleSheet("""
+            QPushButton { color: #888; font-weight: bold; border: 1px solid #444; border-radius: 4px; padding: 4px 8px; margin-left: 5px; }
+            QPushButton:checked { color: #fff; background-color: #d32f2f; border: 1px solid #d32f2f; }
+        """)
+        self.navbar.addWidget(self.auto_rec_btn)
 
         # 3. Secondary Actions (Right)
         # Internal Korean Input Button
@@ -608,6 +619,13 @@ class PrimityBrowser(QMainWindow):
             options = dlg.get_options()
             self.toggle_recording(options)
 
+    def handle_auto_archive(self, ok, browser):
+        if ok and self.auto_rec_btn.isChecked():
+            url = browser.url().toString()
+            if not url.startswith("about:") and not url.startswith("primity:"):
+                self.archiver.start_recording(url, browser.title())
+                self.status.showMessage(f"Auto-Archiving: {browser.title()}...", 3000)
+
     def inject_archiver(self, browser):
         script = self.archiver.get_injection_script()
         browser.page().runJavaScript(script)
@@ -674,6 +692,9 @@ class PrimityBrowser(QMainWindow):
                                          self.tabs.setTabText(self.tabs.indexOf(browser), browser.title()))
             widget.titleChanged.connect(lambda title, browser=widget:
                                          self.tabs.setTabText(self.tabs.indexOf(browser), title))
+            
+            # Auto Archive Hook
+            widget.loadFinished.connect(lambda ok, b=widget: self.handle_auto_archive(ok, b))
             
             # Favicon Support
             widget.iconChanged.connect(lambda icon, browser=widget:
