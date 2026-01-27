@@ -71,6 +71,7 @@ class ArchiveEngine:
                 url TEXT,
                 method TEXT,
                 resource_type INTEGER,
+                payload BLOB,
                 timestamp TEXT,
                 FOREIGN KEY(snapshot_id) REFERENCES core_snapshot(id)
             )
@@ -166,6 +167,22 @@ class ArchiveEngine:
         """, (snapshot_id, url, method, int(resource_type), datetime.now().isoformat()))
         conn.commit()
         conn.close()
+
+    def log_payload(self, snapshot_id, url, payload_b64):
+        """Save actual response body to DB for perfect replay."""
+        import base64
+        try:
+            payload_bytes = base64.b64decode(payload_b64)
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("""
+                UPDATE core_networklog SET payload = ? 
+                WHERE snapshot_id = ? AND url = ?
+            """, (payload_bytes, snapshot_id, url))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Log Payload Error: {e}")
 
     def build_warc(self, snapshot_id, url):
         """Build a WARC file from captured data for this snapshot."""

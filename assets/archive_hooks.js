@@ -57,5 +57,67 @@
     `;
     document.head.appendChild(style);
 
+    // 5. Data Vacuum (Hooking Network calls to Qt WebChannel)
+    if (typeof qt !== 'undefined') {
+        new QWebChannel(qt.webChannelTransport, function (channel) {
+            const recorder = channel.objects.primity_recorder;
+
+            // Helper to blob to base64
+            const blobToBase64 = blob => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+
+            // A. Hook fetch
+            const originalFetch = window.fetch;
+            window.fetch = async (...args) => {
+                const response = await originalFetch(...args);
+                const clone = response.clone();
+                const url = response.url;
+
+                try {
+                    const blob = await clone.blob();
+                    const b64 = await blobToBase64(blob);
+                    recorder.record(url, b64);
+                } catch (e) { console.error("[Vacuum] fetch error", e); }
+
+                return response;
+            };
+
+            // B. Hook XHR
+            const originalXHR = window.XMLHttpRequest;
+            window.XMLHttpRequest = function () {
+                const xhr = new originalXHR();
+                const originalSend = xhr.send;
+                xhr.send = function (...args) {
+                    this.addEventListener('load', async () => {
+                        const url = this.responseURL;
+                        const blob = new Blob([this.response]);
+                        const b64 = await blobToBase64(blob);
+                        recorder.record(url, b64);
+                    });
+                    return originalSend.apply(this, args);
+                };
+                return xhr;
+            };
+
+            console.log("[Primity] Data Vacuum Active.");
+
+            // 6. Interaction Observer (Action-driven POI)
+            let lastActionTime = 0;
+            const observer = new MutationObserver((mutations) => {
+                const now = Date.now();
+                if (now - lastActionTime > 3000) { // Throttling: 3s
+                    lastActionTime = now;
+                    console.log("[Primity] Major UI Change detected, marking snapshot...");
+                    // No need to call 'record' here, but we can notify Manager if needed.
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+        });
+    }
+
     console.log("[Primity] Archive Hooks Active. Time frozen at:", new Date().toISOString());
 })();

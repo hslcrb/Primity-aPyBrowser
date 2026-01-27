@@ -6,11 +6,25 @@ High-fidelity capture using Qt WebEngine native capabilities.
 """
 
 import os
-from PySide6.QtCore import QObject, Signal, Slot, QThread, QTimer
+from PySide6.QtCore import QObject, Signal, Slot, QThread, QTimer, QByteArray
 from PySide6.QtWebEngineCore import QWebEngineDownloadRequest, QWebEngineUrlRequestInterceptor
+from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from src.core.archivebox_core.engine import ArchiveEngine
 from pathlib import Path
+
+class PrimityRecorder(QObject):
+    """Bridge for vacuuming real response data from JS to Python."""
+    data_received = Signal(str, str, str) # snapshot_id, url, payload_b64
+
+    def __init__(self, manager):
+        super().__init__()
+        self.manager = manager
+
+    @Slot(str, str)
+    def record(self, url, payload_b64):
+        if self.manager.is_recording and self.manager.current_snapshot_id:
+            self.data_received.emit(self.manager.current_snapshot_id, url, payload_b64)
 
 class ArchiveInterceptor(QWebEngineUrlRequestInterceptor):
     """Intercepts and logs network requests for perfect archiving."""
@@ -73,8 +87,10 @@ class ArchiveManager(QObject):
             
         self.engine = ArchiveEngine(self.data_dir)
         
-        # Setup Interceptor
+        # Setup Interceptor & Recorder (The Vacuum)
         self.interceptor = ArchiveInterceptor(self)
+        self.recorder = PrimityRecorder(self)
+        self.recorder.data_received.connect(self.engine.log_payload)
 
     def update_storage_path(self, new_path):
         """Update storage path dynamically."""
@@ -155,6 +171,12 @@ class ArchiveManager(QObject):
         # C. DOM Dump
         if extractors.get('dom'):
             view.page().toHtml(lambda html, sid=snapshot_id, sp=snap_path: self._save_dom(sid, sp, html))
+            
+        # D. PDF (Native)
+        if extractors.get('pdf', True): # Default on
+            pdf_path = snap_path / "output.pdf"
+            view.page().printToPdf(str(pdf_path))
+            self.engine._log_result(snapshot_id, "pdf", "success", "output.pdf")
 
     def _save_dom(self, sid, snap_path, html):
         try:

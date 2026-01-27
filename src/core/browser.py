@@ -650,6 +650,11 @@ class PrimityBrowser(QMainWindow):
             widget = QWebEngineView()
             widget.setAttribute(Qt.WA_InputMethodEnabled, True)
             
+            # Setup WebChannel for data vacuuming
+            channel = QWebChannel(widget.page())
+            widget.page().setWebChannel(channel)
+            channel.registerObject("primity_recorder", self.archiver.recorder)
+            
             # Additional settings for focus and input compatibility
             widget.settings().setAttribute(QWebEngineSettings.WebAttribute.FocusOnNavigationEnabled, True)
             widget.settings().setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
