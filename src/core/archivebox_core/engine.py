@@ -223,20 +223,27 @@ class ArchiveEngine:
             return False
 
     def export_network_logs(self, snapshot_id, output_path):
-        """Export all network logs for this snapshot to a JSON file."""
+        """Export all network logs for this snapshot to a JSON file with base64 payloads."""
+        import base64
         try:
             conn = sqlite3.connect(self.db_path)
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
             c.execute("SELECT * FROM core_networklog WHERE snapshot_id = ?", (snapshot_id,))
             rows = c.fetchall()
-            logs = [dict(r) for r in rows]
+            logs = []
+            for r in rows:
+                d = dict(r)
+                if d.get('payload'):
+                    d['payload'] = base64.b64encode(d['payload']).decode('utf-8')
+                logs.append(d)
             conn.close()
             
             with open(output_path, 'w', encoding='utf-8') as f:
                 json.dump(logs, f, indent=2)
             return True
-        except:
+        except Exception as e:
+            print(f"Export Error: {e}")
             return False
 
     def build_wacz(self, snapshot_id):

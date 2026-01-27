@@ -28,11 +28,13 @@
             const url = args[0] instanceof Request ? args[0].url : args[0];
             const matchingLog = networkLogs.find(log => log.url === url);
 
-            if (matchingLog) {
-                console.log("[Primity Replay] Mocking fetch:", url);
-                // In a full implementation, we'd serve the recorded body from DB/WARC.
-                // For now, we simulate a successful 200 OK.
-                return new Response(JSON.stringify({ message: "Data served from Primity Archive" }), {
+            if (matchingLog && matchingLog.payload) {
+                console.log("[Primity Replay] 🚀 Mocking fetch (with data):", url);
+                const binary = atob(matchingLog.payload);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+                return new Response(bytes, {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -53,11 +55,12 @@
             const originalSend = xhr.send;
             xhr.send = function (body) {
                 const matchingLog = networkLogs.find(log => log.url === this._url);
-                if (matchingLog) {
-                    console.log("[Primity Replay] Mocking XHR:", this._url);
-                    // Minimal simulation
+                if (matchingLog && matchingLog.payload) {
+                    console.log("[Primity Replay] 🚀 Mocking XHR (with data):", this._url);
+                    const binary = atob(matchingLog.payload);
                     Object.defineProperty(this, 'status', { value: 200 });
-                    Object.defineProperty(this, 'responseText', { value: "{}" });
+                    Object.defineProperty(this, 'responseText', { value: binary });
+                    Object.defineProperty(this, 'response', { value: binary });
                     this.dispatchEvent(new Event('load'));
                     return;
                 }

@@ -111,7 +111,8 @@ class ArchiveManager(QObject):
                     "wget": True, 
                     "singlefile": True, 
                     "screenshot": True, 
-                    "dom": True
+                    "dom": True,
+                    "media": True
                 }
             }
             
@@ -127,25 +128,43 @@ class ArchiveManager(QObject):
         snap_path = Path(self.engine.get_snapshot_path(snapshot_id))
         
         # 2. Native High-Fidelity Capture (If browser view provided)
+        if browser_view:
+            self._do_native_capture(snapshot_id, snap_path, browser_view, options)
+            
         # 3. Standard Archive Packaging (WARC & WACZ)
         def finalize_archive():
             self.engine.build_warc(snapshot_id, url)
             self.engine.export_network_logs(snapshot_id, snap_path / "network_logs.json")
             self.engine.build_wacz(snapshot_id)
             
+            # 4. Media Extraction (yt-dlp)
+            if options.get('extractors', {}).get('media'):
+                self._run_ytdlp(url, snap_path, snapshot_id)
+            
         QTimer.singleShot(1000, finalize_archive)
         
         self.status_msg.emit(f"✅ Archive Started [ID: {snapshot_id[:8]}]")
         return snapshot_id
 
+    def _run_ytdlp(self, url, snap_path, snapshot_id):
+        """Run yt-dlp to extract video/audio if possible."""
+        import subprocess
+        try:
+            media_path = snap_path / "media"
+            media_path.mkdir(exist_ok=True)
+            cmd = [
+                "yt-dlp", "--no-playlist", "--quiet", "--max-filesize", "100M",
+                "-o", f"{media_path}/%(title)s.%(ext)s",
+                url
+            ]
+            # Run in background to not block
+            subprocess.Popen(cmd)
+            self.engine._log_result(snapshot_id, "media", "success", "media/")
+        except Exception as e:
+            self.engine._log_result(snapshot_id, "media", "failed", str(e))
+
     def _do_native_capture(self, snapshot_id, snap_path, view, options):
         """Perform screenshot and MHTML capture using Qt WebEngine."""
-        # Inject Hooks First (Freeze time, unregister service workers)
-        hooks_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'assets', 'archive_hooks.js')
-        if os.path.exists(hooks_path):
-            with open(hooks_path, 'r') as f:
-                view.page().runJavaScript(f.read())
-                
         extractors = options.get('extractors', {}) if options else {"screenshot": True, "singlefile": True}
         
         # A. Screenshot (Instant)

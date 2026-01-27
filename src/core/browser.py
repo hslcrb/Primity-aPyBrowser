@@ -596,9 +596,32 @@ class PrimityBrowser(QMainWindow):
     def open_url(self, url):
         self.add_new_tab(QUrl(url))
 
+    def toggle_persistent_hooks(self, active):
+        """Register or unregister persistent archive hooks in the profile."""
+        from PySide6.QtWebEngineCore import QWebEngineProfile, QWebEngineScript
+        profile = QWebEngineProfile.defaultProfile()
+        
+        # Remove old script if exists
+        for script in profile.scripts().toList():
+            if script.name() == "PrimityArchiveHooks":
+                profile.scripts().remove(script)
+                
+        if active:
+            script = QWebEngineScript()
+            script.setName("PrimityArchiveHooks")
+            hooks_path = os.path.join(os.getcwd(), 'assets', 'archive_hooks.js')
+            if os.path.exists(hooks_path):
+                with open(hooks_path, 'r') as f:
+                    script.setSourceCode(f.read())
+            script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentReady)
+            script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+            script.setRunsOnSubFrames(True)
+            profile.scripts().insert(script)
+
     def toggle_recording(self, options=None):
         if self.archiver.is_recording:
             self.archiver.stop_recording()
+            self.toggle_persistent_hooks(False)
             self.rec_btn.setIcon(self.get_icon("circle_red"))
             self.rec_btn.setToolTip("Start Archiving (REC)")
             self.status.showMessage("Archiving Stopped", 2000)
@@ -611,6 +634,7 @@ class PrimityBrowser(QMainWindow):
             browser_view = curr if isinstance(curr, QWebEngineView) else None
             
             self.archiver.start_recording(current_url, "User Session", options, browser_view=browser_view)
+            self.toggle_persistent_hooks(True)
             self.rec_btn.setIcon(self.get_icon("circle_white"))
             self.rec_btn.setToolTip("Stop Archiving")
             self.status.showMessage("Archiving Started...", 2000)
