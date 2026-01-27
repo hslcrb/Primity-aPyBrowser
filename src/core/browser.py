@@ -590,7 +590,7 @@ class PrimityBrowser(QMainWindow):
                 self.inject_archiver(curr)
 
     def open_archive_config(self):
-        dlg = ArchiveConfigDialog(self)
+        dlg = ArchiveConfigDialog(self, lang=self.current_lang)
         if dlg.exec():
             options = dlg.get_options()
             self.toggle_recording(options)
