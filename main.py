@@ -6,9 +6,17 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
+from PySide6.QtWebEngineCore import QWebEngineUrlScheme
 from src.core.browser import PrimityBrowser
 
 def main():
+    # Register custom scheme for archiving BEFORE creating QApplication
+    scheme = QWebEngineUrlScheme(b"primity-archive")
+    scheme.setFlags(QWebEngineUrlScheme.Flag.LocalScheme | 
+                    QWebEngineUrlScheme.Flag.LocalAccessAllowed | 
+                    QWebEngineUrlScheme.Flag.ContentSecurityPolicyIgnored)
+    QWebEngineUrlScheme.registerScheme(scheme)
+    
     # 리눅스 X11 한글 입력 호환성 속성
     # Force Software OpenGL to prevent Segfaults on some Linux drivers
     QApplication.setAttribute(Qt.AA_UseSoftwareOpenGL)
