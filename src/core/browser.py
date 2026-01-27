@@ -142,6 +142,15 @@ class PrimityBrowser(QMainWindow):
         if self.title_bar.underMouse():
             self.toggle_maximize()
 
+    def keyPressEvent(self, event):
+        """전역 키 이벤트 - 오른쪽 Alt로 한영 전환"""
+        from PySide6.QtCore import Qt
+        if event.key() == Qt.Key_AltGr or (event.key() == Qt.Key_Alt and event.nativeScanCode() == 108):
+            # 오른쪽 Alt 키 (한영 전환)
+            self.toggle_internal_ime()
+            return
+        super().keyPressEvent(event)
+
     def get_icon(self, name):
         # Use simple relative path from CWD (root)
         icon_path = f"assets/icons/{name}.svg"
@@ -182,6 +191,7 @@ class PrimityBrowser(QMainWindow):
         self.url_bar = HangulLineEdit()
         self.url_bar.setPlaceholderText("Search or enter address")
         self.url_bar.returnPressed.connect(self.navigate_to_url)
+        self.url_bar.hangul_toggle_requested.connect(self.toggle_internal_ime)
         # Only Lock Icon allowed here
         self.security_action = self.url_bar.addAction(self.get_icon("unlock"), HangulLineEdit.LeadingPosition)
         self.navbar.addWidget(self.url_bar)

@@ -4,7 +4,7 @@ Primity Native Hangul IME for Qt Widgets
 한글 입력기 - Qt 네이티브 위젯(QLineEdit 등)용
 """
 
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import QLineEdit
 from PySide6.QtGui import QKeyEvent
 
@@ -47,6 +47,9 @@ LAYOUT_DUBEOL = {
 class HangulLineEdit(QLineEdit):
     """한글 입력이 가능한 QLineEdit"""
     
+    # 한영 전환 요청 시그널 (부모 창에서 처리)
+    hangul_toggle_requested = Signal()
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.hangul_active = False
@@ -81,6 +84,11 @@ class HangulLineEdit(QLineEdit):
         return chr(BASE_CODE + (c * 588) + (v * 28) + t)
     
     def keyPressEvent(self, event: QKeyEvent):
+        # 오른쪽 Alt 키 (한영 전환) 처리
+        if event.key() == Qt.Key_AltGr or (event.key() == Qt.Key_Alt and event.nativeScanCode() == 108):
+            self.hangul_toggle_requested.emit()
+            return
+        
         # 한글 모드가 아니면 기본 처리
         if not self.hangul_active:
             super().keyPressEvent(event)
@@ -88,6 +96,13 @@ class HangulLineEdit(QLineEdit):
         
         # 특수 키 처리
         if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Escape, Qt.Key_Tab):
+            self.reset()
+            super().keyPressEvent(event)
+            return
+        
+        # 방향키, Home, End 등
+        if event.key() in (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, 
+                          Qt.Key_Home, Qt.Key_End, Qt.Key_PageUp, Qt.Key_PageDown):
             self.reset()
             super().keyPressEvent(event)
             return
@@ -101,8 +116,14 @@ class HangulLineEdit(QLineEdit):
                 super().keyPressEvent(event)
                 return
         
-        # Ctrl, Alt 조합은 패스
-        if event.modifiers() & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier):
+        # Delete 키
+        if event.key() == Qt.Key_Delete:
+            self.reset()
+            super().keyPressEvent(event)
+            return
+        
+        # Ctrl, Alt 조합은 패스 (Ctrl+C, Ctrl+V 등)
+        if event.modifiers() & (Qt.ControlModifier | Qt.MetaModifier):
             super().keyPressEvent(event)
             return
         
@@ -115,7 +136,7 @@ class HangulLineEdit(QLineEdit):
         # 한글 매핑
         mapped = LAYOUT_DUBEOL.get(key_text)
         if not mapped:
-            # 한글이 아닌 문자는 그냥 입력
+            # 한글이 아닌 문자 (숫자, 특수문자 등)는 그냥 입력
             self.reset()
             super().keyPressEvent(event)
             return
@@ -147,7 +168,7 @@ class HangulLineEdit(QLineEdit):
             if is_vowel:
                 self.state = 2
                 self.idx_jun = in_jun
-                self.update(self.make_syllable(self.idx_cho, self.idx_jun, 0))
+                self.update_char(self.make_syllable(self.idx_cho, self.idx_jun, 0))
             else:
                 self.reset()
                 self.state = 1
@@ -161,7 +182,7 @@ class HangulLineEdit(QLineEdit):
                 # 복합 모음 시도
                 if self.idx_jun in MIX_VOWEL_MAP and in_jun in MIX_VOWEL_MAP[self.idx_jun]:
                     self.idx_jun = MIX_VOWEL_MAP[self.idx_jun][in_jun]
-                    self.update(self.make_syllable(self.idx_cho, self.idx_jun, 0))
+                    self.update_char(self.make_syllable(self.idx_cho, self.idx_jun, 0))
                 else:
                     self.reset()
                     self.commit(char)
@@ -169,7 +190,7 @@ class HangulLineEdit(QLineEdit):
                 if in_jon > 0:
                     self.state = 3
                     self.idx_jon = in_jon
-                    self.update(self.make_syllable(self.idx_cho, self.idx_jun, self.idx_jon))
+                    self.update_char(self.make_syllable(self.idx_cho, self.idx_jun, self.idx_jon))
                 else:
                     self.reset()
                     self.state = 1
@@ -193,7 +214,7 @@ class HangulLineEdit(QLineEdit):
                     left_jon = 0
                     moved_cho = self.get_cho_index(JON_TABLE[prev_jon])
                 
-                self.update(self.make_syllable(self.idx_cho, self.idx_jun, left_jon))
+                self.update_char(self.make_syllable(self.idx_cho, self.idx_jun, left_jon))
                 self.reset()
                 self.state = 2
                 self.idx_cho = moved_cho
@@ -203,7 +224,7 @@ class HangulLineEdit(QLineEdit):
                 # 복합 종성 시도
                 if self.idx_jon in MIX_JONG_MAP and in_jon in MIX_JONG_MAP[self.idx_jon]:
                     self.idx_jon = MIX_JONG_MAP[self.idx_jon][in_jon]
-                    self.update(self.make_syllable(self.idx_cho, self.idx_jun, self.idx_jon))
+                    self.update_char(self.make_syllable(self.idx_cho, self.idx_jun, self.idx_jon))
                 else:
                     self.reset()
                     self.state = 1
@@ -224,16 +245,16 @@ class HangulLineEdit(QLineEdit):
             # 중성 제거 -> 초성만
             self.state = 1
             self.idx_jun = -1
-            self.update(CHO_TABLE[self.idx_cho])
+            self.update_char(CHO_TABLE[self.idx_cho])
         elif self.state == 3:
             # 종성 제거
             if self.idx_jon in REVERSE_JONG_MAP:
                 self.idx_jon = REVERSE_JONG_MAP[self.idx_jon][0]
-                self.update(self.make_syllable(self.idx_cho, self.idx_jun, self.idx_jon))
+                self.update_char(self.make_syllable(self.idx_cho, self.idx_jun, self.idx_jon))
             else:
                 self.state = 2
                 self.idx_jon = 0
-                self.update(self.make_syllable(self.idx_cho, self.idx_jun, 0))
+                self.update_char(self.make_syllable(self.idx_cho, self.idx_jun, 0))
     
     def commit(self, text):
         """새 글자 추가"""
@@ -242,7 +263,7 @@ class HangulLineEdit(QLineEdit):
         self.setText(current[:cursor] + text + current[cursor:])
         self.setCursorPosition(cursor + len(text))
     
-    def update(self, text):
+    def update_char(self, text):
         """현재 조합 중인 글자 교체"""
         cursor = self.cursorPosition()
         current = self.text()
