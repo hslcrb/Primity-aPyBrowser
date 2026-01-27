@@ -2,7 +2,8 @@ import json
 import os
 from PySide6.QtWidgets import (QMainWindow, QToolBar, QLineEdit, QTabWidget, 
                              QStatusBar, QPushButton, QMenu, QMessageBox, QVBoxLayout, 
-                             QWidget, QHBoxLayout, QLabel, QFileDialog, QInputDialog, QDialog)
+                             QWidget, QHBoxLayout, QLabel, QFileDialog, QInputDialog, QDialog,
+                             QToolButton)
 from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot, QPoint, QPropertyAnimation, QVariantAnimation
 from PySide6.QtGui import QAction, QIcon, QPixmap, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -13,6 +14,8 @@ from src.ui.styles import get_stylesheet
 from src.ui.components import MinimalCard, BookmarkDialog
 from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
+from src.pages.archive_dashboard import ArchiveDashboard
+from src.ui.archive_config import ArchiveConfigDialog
 from src.utils.helpers import generate_strong_password
 from src.core.ime_manager import IMEManager
 from src.core.archive_manager import ArchiveManager
@@ -183,10 +186,20 @@ class PrimityBrowser(QMainWindow):
         self.navbar.addWidget(self.url_bar)
 
         # Archive (REC) Button - Placed right after URL Bar
-        self.rec_btn = QAction(self.get_icon("circle_red"), "", self)
+        self.rec_btn = QToolButton()
+        self.rec_btn.setIcon(self.get_icon("circle_red"))
         self.rec_btn.setToolTip("Start Archiving (REC)")
-        self.rec_btn.triggered.connect(self.toggle_recording)
-        self.navbar.addAction(self.rec_btn)
+        self.rec_btn.clicked.connect(self.toggle_recording)
+        self.rec_btn.setPopupMode(QToolButton.MenuButtonPopup)
+        
+        # Rec Menu for Advanced Options
+        rec_menu = QMenu(self)
+        adv_action = QAction("Advanced Capture...", self)
+        adv_action.triggered.connect(self.open_archive_config)
+        rec_menu.addAction(adv_action)
+        self.rec_btn.setMenu(rec_menu)
+        
+        self.navbar.addWidget(self.rec_btn)
 
         # 3. Secondary Actions (Right)
         # Internal Korean Input Button
@@ -277,6 +290,13 @@ class PrimityBrowser(QMainWindow):
         settings_action = QAction(self.tr_text("Settings"), self)
         settings_action.triggered.connect(self.open_settings_tab)
         menu.addAction(settings_action)
+
+        menu.addSeparator()
+
+        # Archive Dashboard (New Modded Feature)
+        archive_action = QAction("Archive Dashboard (Pro)", self)
+        archive_action.triggered.connect(self.open_archive_dashboard)
+        menu.addAction(archive_action)
         
         return menu
 
@@ -312,6 +332,9 @@ class PrimityBrowser(QMainWindow):
 
     def open_settings_tab(self):
         self.add_new_tab(internal="settings", label=self.tr_text("Settings"))
+
+    def open_archive_dashboard(self):
+        self.add_new_tab(internal="archive", label="Archive Dashboard")
 
     def toggle_language(self):
         self.current_lang = 'en' if self.current_lang == 'ko' else 'ko'
@@ -545,7 +568,7 @@ class PrimityBrowser(QMainWindow):
     def open_url(self, url):
         self.add_new_tab(QUrl(url))
 
-    def toggle_recording(self):
+    def toggle_recording(self, options=None):
         if self.archiver.is_recording:
             self.archiver.stop_recording()
             self.rec_btn.setIcon(self.get_icon("circle_red"))
@@ -556,7 +579,7 @@ class PrimityBrowser(QMainWindow):
             if isinstance(self.tabs.currentWidget(), QWebEngineView):
                 current_url = self.tabs.currentWidget().url().toString()
                 
-            self.archiver.start_recording(current_url, "User Session")
+            self.archiver.start_recording(current_url, "User Session", options)
             self.rec_btn.setIcon(self.get_icon("circle_white"))
             self.rec_btn.setToolTip("Stop Archiving")
             self.status.showMessage("Archiving Started...", 2000)
@@ -565,6 +588,12 @@ class PrimityBrowser(QMainWindow):
             curr = self.tabs.currentWidget()
             if isinstance(curr, QWebEngineView):
                 self.inject_archiver(curr)
+
+    def open_archive_config(self):
+        dlg = ArchiveConfigDialog(self)
+        if dlg.exec():
+            options = dlg.get_options()
+            self.toggle_recording(options)
 
     def inject_archiver(self, browser):
         script = self.archiver.get_injection_script()
@@ -575,6 +604,8 @@ class PrimityBrowser(QMainWindow):
             widget = PasswordPage(self, self.current_lang)
         elif internal == "settings":
             widget = SettingsPage(self, self.current_lang)
+        elif internal == "archive":
+            widget = ArchiveDashboard(self)
         else:
             if qurl is None:
                 qurl = QUrl('https://www.google.com')
