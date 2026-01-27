@@ -13,9 +13,10 @@ def main():
     # Register custom scheme for archiving BEFORE creating QApplication
     scheme = QWebEngineUrlScheme(b"primity-archive")
     scheme.setFlags(QWebEngineUrlScheme.Flag.LocalScheme | 
-                    QWebEngineUrlScheme.Flag.IsStandardScheme |
                     QWebEngineUrlScheme.Flag.SecureScheme |
                     QWebEngineUrlScheme.Flag.LocalAccessAllowed | 
+                    QWebEngineUrlScheme.Flag.ServiceWorkersAllowed |
+                    QWebEngineUrlScheme.Flag.FetchApiAllowed |
                     QWebEngineUrlScheme.Flag.ContentSecurityPolicyIgnored)
     QWebEngineUrlScheme.registerScheme(scheme)
     
