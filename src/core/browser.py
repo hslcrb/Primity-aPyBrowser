@@ -43,6 +43,10 @@ class PrimityBrowser(QMainWindow):
         self.archiver = ArchiveManager()
         self.kor_input_active = False # Local state for UI sync
         
+        # Register Network Interceptor for Archiving
+        from PySide6.QtWebEngineCore import QWebEngineProfile
+        QWebEngineProfile.defaultProfile().setUrlRequestInterceptor(self.archiver.interceptor)
+        
         # Dragging support
         self._old_pos = None
 

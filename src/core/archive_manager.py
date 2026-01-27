@@ -7,10 +7,28 @@ High-fidelity capture using Qt WebEngine native capabilities.
 
 import os
 from PySide6.QtCore import QObject, Signal, Slot, QThread, QTimer
-from PySide6.QtWebEngineCore import QWebEngineDownloadRequest
+from PySide6.QtWebEngineCore import QWebEngineDownloadRequest, QWebEngineUrlRequestInterceptor
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from src.core.archivebox_core.engine import ArchiveEngine
 from pathlib import Path
+
+class ArchiveInterceptor(QWebEngineUrlRequestInterceptor):
+    """Intercepts and logs network requests for perfect archiving."""
+    def __init__(self, manager):
+        super().__init__()
+        self.manager = manager
+
+    def interceptRequest(self, info):
+        if self.manager.is_recording and self.manager.current_snapshot_id:
+            url = info.requestUrl().toString()
+            method = info.requestMethod().data().decode()
+            resource_type = info.resourceType()
+            try:
+                self.manager.engine.log_network_request(
+                    self.manager.current_snapshot_id, url, method, resource_type
+                )
+            except:
+                pass
 
 class ArchiveWorker(QThread):
     finished = Signal(bool, str)
@@ -37,6 +55,7 @@ class ArchiveManager(QObject):
     def __init__(self):
         super().__init__()
         self.is_recording = False
+        self.current_snapshot_id = None
         
         # Default data path: projects/Primity/data
         primary_data = Path(os.getcwd()) / 'data'
@@ -53,6 +72,9 @@ class ArchiveManager(QObject):
             self.data_dir.mkdir(parents=True, exist_ok=True)
             
         self.engine = ArchiveEngine(self.data_dir)
+        
+        # Setup Interceptor
+        self.interceptor = ArchiveInterceptor(self)
 
     def update_storage_path(self, new_path):
         """Update storage path dynamically."""
@@ -67,7 +89,8 @@ class ArchiveManager(QObject):
         self.status_msg.emit(f"Starting Native Archive: {url}...")
         
         # 1. Create entry in DB and dir
-        snapshot_id = self.engine.add(url, title, extractors=options.get('extractors') if options else None)
+        self.current_snapshot_id = self.engine.add(url, title, extractors=options.get('extractors') if options else None)
+        snapshot_id = self.current_snapshot_id
         snap_path = Path(self.engine.get_snapshot_path(snapshot_id))
         
         # 2. Native High-Fidelity Capture (If browser view provided)
@@ -79,6 +102,12 @@ class ArchiveManager(QObject):
 
     def _do_native_capture(self, snapshot_id, snap_path, view, options):
         """Perform screenshot and MHTML capture using Qt WebEngine."""
+        # Inject Hooks First (Freeze time, unregister service workers)
+        hooks_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'assets', 'archive_hooks.js')
+        if os.path.exists(hooks_path):
+            with open(hooks_path, 'r') as f:
+                view.page().runJavaScript(f.read())
+                
         extractors = options.get('extractors', {}) if options else {"screenshot": True, "singlefile": True}
         
         # A. Screenshot (Instant)
@@ -116,6 +145,7 @@ class ArchiveManager(QObject):
     @Slot()
     def stop_recording(self):
         self.is_recording = False
+        self.current_snapshot_id = None
         self.status_msg.emit("Archiving Mode Disabled")
 
     # ========== Data Access Proxy ==========

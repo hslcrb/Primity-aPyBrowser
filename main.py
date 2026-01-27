@@ -29,6 +29,11 @@ def main():
     sys.argv.append("--enable-quic")
     sys.argv.append("--origin-to-force-quic-on=*")
     
+    # Archiving Excellence Flags (CORS bypass, etc.)
+    sys.argv.append("--disable-web-security")
+    sys.argv.append("--allow-running-insecure-content")
+    sys.argv.append("--autoplay-policy=no-user-gesture-required")
+    
     app = QApplication(sys.argv)
     app.setApplicationName("Primity")
     

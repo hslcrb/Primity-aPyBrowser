@@ -60,6 +60,19 @@ class ArchiveEngine:
                 FOREIGN KEY(snapshot_id) REFERENCES core_snapshot(id)
             )
         """)
+
+        # Network Log Table (For Replay/Mocking)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS core_networklog (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                snapshot_id TEXT,
+                url TEXT,
+                method TEXT,
+                resource_type INTEGER,
+                timestamp TEXT,
+                FOREIGN KEY(snapshot_id) REFERENCES core_snapshot(id)
+            )
+        """)
         
         conn.commit()
         conn.close()
@@ -88,7 +101,7 @@ class ArchiveEngine:
         
         # Run standard CLI extractors (wget)
         if extractors and extractors.get('wget'):
-            self._run_wget(url, snap_dir)
+            self._run_wget(url, snap_dir, depth=depth)
             
         return snapshot_id
 
@@ -105,7 +118,7 @@ class ArchiveEngine:
         conn.commit()
         conn.close()
 
-    def _run_wget(self, url, output_dir):
+    def _run_wget(self, url, output_dir, depth=0):
         """Native Wget extraction."""
         try:
             # We save into a 'wget' subfolder
@@ -115,10 +128,16 @@ class ArchiveEngine:
             cmd = [
                 "wget", "--no-clobber", "--page-requisites", "--html-extension",
                 "--convert-links", "--restrict-file-names=windows",
-                "--directory-prefix", str(wget_dir),
-                url
+                "--directory-prefix", str(wget_dir)
             ]
-            subprocess.run(cmd, capture_output=True, timeout=60)
+            
+            # Add recursion if depth > 0
+            if depth > 0:
+                cmd.extend(["--recursive", f"--level={depth}", "--no-parent"])
+                
+            cmd.append(url)
+            
+            subprocess.run(cmd, capture_output=True, timeout=300) # Increased timeout for recursion
             
             self._log_result(output_dir.name, "wget", "success", "wget/index.html")
         except Exception as e:
@@ -132,6 +151,17 @@ class ArchiveEngine:
             INSERT INTO core_archiveresult (snapshot_id, extractor, status, output, start_ts) 
             VALUES (?, ?, ?, ?, ?)
         """, (snapshot_id, extractor, status, output, datetime.now().isoformat()))
+        conn.commit()
+        conn.close()
+
+    def log_network_request(self, snapshot_id, url, method, resource_type):
+        """Log individual network requests."""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO core_networklog (snapshot_id, url, method, resource_type, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        """, (snapshot_id, url, method, int(resource_type), datetime.now().isoformat()))
         conn.commit()
         conn.close()
 
