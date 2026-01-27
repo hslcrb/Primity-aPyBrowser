@@ -81,7 +81,7 @@ class ArchiveEngine:
         conn.close()
 
     def add(self, url, title=None, depth=0, extractors=None):
-        """Add a new URL to the archive index."""
+        """Add a new URL to the archive index. (Fast entry creation)"""
         timestamp = str(int(time.time()))
         snapshot_id = timestamp 
         
@@ -101,10 +101,6 @@ class ArchiveEngine:
                   (snapshot_id, url, timestamp, title or url, "pending", datetime.now().isoformat()))
         conn.commit()
         conn.close()
-        
-        # Run standard CLI extractors (wget)
-        if extractors and extractors.get('wget'):
-            self._run_wget(url, snap_dir, depth=depth)
             
         return snapshot_id
 

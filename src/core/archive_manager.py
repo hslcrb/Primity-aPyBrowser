@@ -48,19 +48,40 @@ class ArchiveWorker(QThread):
     finished = Signal(bool, str)
     progress = Signal(str)
 
-    def __init__(self, engine, url, title, options):
+    def __init__(self, manager, url, title, options, snapshot_id, snap_path):
         super().__init__()
-        self.engine = engine
+        self.manager = manager
+        self.engine = manager.engine
         self.url = url
         self.title = title
         self.options = options or {}
+        self.snapshot_id = snapshot_id
+        self.snap_path = snap_path
 
     def run(self):
         try:
-            # We don't call engine.add here because the snapshot_id is needed for native parts.
-            # The sync orchestration is handled in ArchiveManager.
-            pass
+            self.progress.emit(f"Background capture starting: {self.url}")
+            
+            # 1. Run Wget (Slow)
+            if self.options.get('extractors', {}).get('wget', True):
+                self.progress.emit("Running Wget...")
+                self.engine._run_wget(self.url, self.snap_path, depth=self.options.get('depth', 0))
+                
+            # 2. Build WARC & Export Logs (Medium)
+            self.progress.emit("Building WARC & Network Logs...")
+            self.engine.build_warc(self.snapshot_id, self.url)
+            self.engine.export_network_logs(self.snapshot_id, self.snap_path / "network_logs.json")
+            self.engine.build_wacz(self.snapshot_id)
+            
+            # 3. Media Extraction (Slow)
+            if self.options.get('extractors', {}).get('media'):
+                self.progress.emit("Extracting Media...")
+                self.manager._run_ytdlp(self.url, self.snap_path, self.snapshot_id)
+                
+            self.finished.emit(True, f"Archive Complete [ID: {self.snapshot_id[:8]}]")
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             self.finished.emit(False, str(e))
 
 class ArchiveManager(QObject):
@@ -100,10 +121,10 @@ class ArchiveManager(QObject):
 
     @Slot()
     def start_recording(self, url, title="", options=None, browser_view=None):
-        """High-level entry point for archiving."""
+        """High-level entry point for archiving. (Async)"""
         self.is_recording = True
         
-        # Set default options if none provided (Manual REC click)
+        # Set default options if none provided
         if not options:
             options = {
                 "depth": 0,
@@ -112,13 +133,14 @@ class ArchiveManager(QObject):
                     "singlefile": True, 
                     "screenshot": True, 
                     "dom": True,
-                    "media": True
+                    "media": True,
+                    "pdf": True
                 }
             }
             
-        self.status_msg.emit(f"Starting Native Archive: {url}...")
+        self.status_msg.emit(f"Initializing Archive: {url}...")
         
-        # 1. Create entry in DB and dir
+        # 1. Create entry in DB and dir (FAST SYNC)
         self.current_snapshot_id = self.engine.add(
             url, title, 
             depth=options.get("depth", 0),
@@ -127,21 +149,19 @@ class ArchiveManager(QObject):
         snapshot_id = self.current_snapshot_id
         snap_path = Path(self.engine.get_snapshot_path(snapshot_id))
         
-        # 2. Native High-Fidelity Capture (If browser view provided)
+        # 2. Native High-Fidelity Capture (Instant parts on UI Thread)
         if browser_view:
-            self._do_native_capture(snapshot_id, snap_path, browser_view, options)
+            # We wrap this to be safe
+            try:
+                self._do_native_capture(snapshot_id, snap_path, browser_view, options)
+            except Exception as e:
+                print(f"Native Capture Error: {e}")
             
-        # 3. Standard Archive Packaging (WARC & WACZ)
-        def finalize_archive():
-            self.engine.build_warc(snapshot_id, url)
-            self.engine.export_network_logs(snapshot_id, snap_path / "network_logs.json")
-            self.engine.build_wacz(snapshot_id)
-            
-            # 4. Media Extraction (yt-dlp)
-            if options.get('extractors', {}).get('media'):
-                self._run_ytdlp(url, snap_path, snapshot_id)
-            
-        QTimer.singleShot(1000, finalize_archive)
+        # 3. Heavy Background Extraction (ASYNC THREAD)
+        self.worker = ArchiveWorker(self, url, title, options, snapshot_id, snap_path)
+        self.worker.progress.connect(lambda msg: self.status_msg.emit(msg))
+        self.worker.finished.connect(self._on_finished)
+        self.worker.start()
         
         self.status_msg.emit(f"✅ Archive Started [ID: {snapshot_id[:8]}]")
         return snapshot_id
