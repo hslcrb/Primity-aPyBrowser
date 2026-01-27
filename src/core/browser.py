@@ -15,6 +15,7 @@ from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
 from src.utils.helpers import generate_strong_password
 from src.core.ime_manager import IMEManager
+from src.core.archive_manager import ArchiveManager
 
 
 class PrimityBrowser(QMainWindow):
@@ -35,6 +36,7 @@ class PrimityBrowser(QMainWindow):
         
         # Managers
         self.ime = IMEManager(self)
+        self.archiver = ArchiveManager()
         self.kor_input_active = False # Local state for UI sync
         
         # Dragging support
@@ -179,6 +181,12 @@ class PrimityBrowser(QMainWindow):
         # Only Lock Icon allowed here
         self.security_action = self.url_bar.addAction(self.get_icon("unlock"), QLineEdit.LeadingPosition)
         self.navbar.addWidget(self.url_bar)
+
+        # Archive (REC) Button - Placed right after URL Bar
+        self.rec_btn = QAction(self.get_icon("circle_black"), "", self)
+        self.rec_btn.setToolTip("Start Archiving (REC)")
+        self.rec_btn.triggered.connect(self.toggle_recording)
+        self.navbar.addAction(self.rec_btn)
 
         # 3. Secondary Actions (Right)
         # Internal Korean Input Button
@@ -537,6 +545,31 @@ class PrimityBrowser(QMainWindow):
     def open_url(self, url):
         self.add_new_tab(QUrl(url))
 
+    def toggle_recording(self):
+        if self.archiver.is_recording:
+            self.archiver.stop_recording()
+            self.rec_btn.setIcon(self.get_icon("circle_black"))
+            self.rec_btn.setToolTip("Start Archiving (REC)")
+            self.status.showMessage("Archiving Stopped", 2000)
+        else:
+            current_url = "about:blank"
+            if isinstance(self.tabs.currentWidget(), QWebEngineView):
+                current_url = self.tabs.currentWidget().url().toString()
+                
+            self.archiver.start_recording(current_url, "User Session")
+            self.rec_btn.setIcon(self.get_icon("circle_red"))
+            self.rec_btn.setToolTip("Stop Archiving")
+            self.status.showMessage("Archiving Started...", 2000)
+            
+            # Inject script into current page immediately
+            curr = self.tabs.currentWidget()
+            if isinstance(curr, QWebEngineView):
+                self.inject_archiver(curr)
+
+    def inject_archiver(self, browser):
+        script = self.archiver.get_injection_script()
+        browser.page().runJavaScript(script)
+
     def add_new_tab(self, qurl=None, label="New Tab", internal=None):
         if internal == "passwords":
             widget = PasswordPage(self, self.current_lang)
@@ -563,6 +596,16 @@ class PrimityBrowser(QMainWindow):
             
             # Software IME Integration
             self.ime.inject_script(widget)
+            
+            # Archiver Integration
+            # We inject script on load finished to ensure context is ready, 
+            # OR typically we need to inject via UserScript for early capture.
+            # For now, simplistic injection on load started/finished.
+            if self.archiver.is_recording:
+                # Note: To capture early requests, we really need QWebEngineScript/UserScripts.
+                # runJavaScript is late-bound. 
+                # But for our 'current view' strategy, re-injecting on load is okay for user actions.
+                widget.loadFinished.connect(lambda _, b=widget: self.inject_archiver(b))
 
             # Connect reload state triggers
             widget.loadStarted.connect(lambda b=widget: self.start_reload_anim(b))
