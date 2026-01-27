@@ -20,11 +20,13 @@ class ArchiveEngine:
         self.data_dir = Path(data_dir)
         self.archive_dir = self.data_dir / "archive"
         self.db_path = self.data_dir / "index.sqlite3"
+        self.warc_dir = self.data_dir / "warcs"
         
         # Ensure directories exist
         try:
             self.data_dir.mkdir(parents=True, exist_ok=True)
             self.archive_dir.mkdir(parents=True, exist_ok=True)
+            self.warc_dir.mkdir(parents=True, exist_ok=True)
             self._init_db()
         except Exception as e:
             print(f"[ArchiveEngine] Critical Init Error: {e}")
@@ -164,6 +166,44 @@ class ArchiveEngine:
         """, (snapshot_id, url, method, int(resource_type), datetime.now().isoformat()))
         conn.commit()
         conn.close()
+
+    def build_warc(self, snapshot_id, url):
+        """Build a WARC file from captured data for this snapshot."""
+        warc_path = self.warc_dir / f"{snapshot_id}.warc.gz"
+        try:
+            from warcio.warcwriter import WARCWriter
+            from warcio.statusandheaders import StatusAndHeaders
+            import io
+            import requests
+
+            with open(warc_path, 'wb') as output:
+                writer = WARCWriter(output, gzip=True)
+                
+                # Add metadata record
+                data = {"url": url, "snapshot_id": snapshot_id, "app": "Primity Browser"}
+                record = writer.create_warc_record(url, 'metadata', 
+                                                payload=io.BytesIO(json.dumps(data).encode('utf-8')),
+                                                warc_headers_dict={'Content-Type': 'application/json'})
+                writer.write_record(record)
+                
+                # Fetch essential resources if not already local (Basic Implementation)
+                # In full 'Web Time Machine', we'd use the intercepted byte-stream.
+                # For now, we fetch current state for WARC packaging.
+                try:
+                    resp = requests.get(url, timeout=10, headers={'User-Agent': 'PrimityArchiver/1.0'})
+                    http_headers = StatusAndHeaders('200 OK', resp.headers.items(), protocol='HTTP/1.1')
+                    record = writer.create_warc_record(url, 'response',
+                                                    payload=io.BytesIO(resp.content),
+                                                    http_headers=http_headers)
+                    writer.write_record(record)
+                except:
+                    pass
+
+            self._log_result(snapshot_id, "warc", "success", f"warcs/{snapshot_id}.warc.gz")
+            return True
+        except Exception as e:
+            self._log_result(snapshot_id, "warc", "failed", str(e))
+            return False
 
     def delete(self, snapshot_id):
         """Delete snapshot files and DB entries."""

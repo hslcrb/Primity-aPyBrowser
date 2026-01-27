@@ -39,5 +39,23 @@
         return 0.5; // Perfectly balanced, as all things should be.
     };
 
+    // 4. REC Visibility (Breathing Red Border)
+    const style = document.createElement('style');
+    style.id = 'primity-rec-indicator';
+    style.innerHTML = `
+        @keyframes primity-breathing {
+            0% { box-shadow: inset 0 0 15px rgba(211, 47, 47, 0.4); border-color: rgba(211, 47, 47, 0.3); }
+            50% { box-shadow: inset 0 0 35px rgba(211, 47, 47, 0.9); border-color: rgba(211, 47, 47, 1); }
+            100% { box-shadow: inset 0 0 15px rgba(211, 47, 47, 0.4); border-color: rgba(211, 47, 47, 0.3); }
+        }
+        :root {
+            border: 5px solid rgba(211, 47, 47, 0.5) !important;
+            animation: primity-breathing 2.5s infinite ease-in-out !important;
+            transition: border 0.5s ease;
+            box-sizing: border-box !important;
+        }
+    `;
+    document.head.appendChild(style);
+
     console.log("[Primity] Archive Hooks Active. Time frozen at:", new Date().toISOString());
 })();

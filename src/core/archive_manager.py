@@ -114,6 +114,9 @@ class ArchiveManager(QObject):
         if browser_view and isinstance(browser_view, QWebEngineView):
             self._do_native_capture(snapshot_id, snap_path, browser_view, options)
         
+        # 3. Standard Archive Packaging (WARC)
+        QTimer.singleShot(500, lambda: self.engine.build_warc(snapshot_id, url))
+        
         self.status_msg.emit(f"✅ Archive Started [ID: {snapshot_id[:8]}]")
         return snapshot_id
 
