@@ -1,0 +1,2 @@
+
+> /usr/local/bin/archivebox server --quick-init 0.0.0.0:8000; TS=2026-01-27__04:37:47 VERSION=0.8.5rc51 IN_DOCKER=True IS_TTY=False
