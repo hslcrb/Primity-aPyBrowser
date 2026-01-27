@@ -185,15 +185,15 @@ class ArchiveDashboard(QWidget):
             default_index = os.path.join(local_path, "index.html")
             
             if os.path.exists(wget_index):
-                target_file_path = wget_index
+                target_subpath = "wget/index.html"
             elif os.path.exists(mhtml_file):
-                target_file_path = mhtml_file
+                target_subpath = "output.mhtml"
             elif os.path.exists(dom_file):
-                target_file_path = dom_file
+                target_subpath = "dom.html"
             else:
-                target_file_path = default_index
+                target_subpath = "index.html"
                 
-            local_url = QUrl.fromLocalFile(target_file_path).toString()
+            local_url = f"primity-archive://{snap_id}/{target_subpath}"
             view_btn.clicked.connect(lambda _, u=local_url: self.browser.open_url(u))
             actions_layout.addWidget(view_btn)
             

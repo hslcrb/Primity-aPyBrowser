@@ -21,7 +21,39 @@ from src.ui.hangul_lineedit import HangulLineEdit
 from src.utils.helpers import generate_strong_password
 from src.core.ime_manager import IMEManager
 from src.core.archive_manager import ArchiveManager
+from PySide6.QtWebEngineCore import QWebEngineProfile, QWebEngineScript, QWebEngineUrlSchemeHandler, QWebEngineUrlRequestJob
 from PySide6.QtGui import QPainter, QColor, QPen
+
+class ArchiveSchemeHandler(QWebEngineUrlSchemeHandler):
+    """Bypasses file:// sandbox by serving archive content via primity-archive:// scheme."""
+    def __init__(self, manager):
+        super().__init__()
+        self.manager = manager
+
+    def requestStarted(self, job: QWebEngineUrlRequestJob):
+        path = job.requestUrl().path()
+        # URL format: primity-archive://<snap_id>/<file_path>
+        parts = path.strip('/').split('/', 1)
+        if len(parts) < 1:
+            job.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
+            return
+            
+        snap_id = parts[0]
+        file_subpath = parts[1] if len(parts) > 1 else "index.html"
+        
+        full_path = Path(self.manager.get_snapshot_path(snap_id)) / file_subpath
+        if full_path.exists() and full_path.is_file():
+            # Determine content type (simple)
+            ext = full_path.suffix.lower()
+            mime = "text/html"
+            if ext == ".mhtml": mime = "multipart/related"
+            elif ext == ".pdf": mime = "application/pdf"
+            elif ext == ".png": mime = "image/png"
+            elif ext == ".json": mime = "application/json"
+            
+            job.reply(mime.encode(), open(full_path, 'rb'))
+        else:
+            job.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
 
 class RecordingContainer(QWidget):
     """Native Qt container that provides a breathing red border during REC mode."""
@@ -31,14 +63,14 @@ class RecordingContainer(QWidget):
         self.manager = manager
         self.glow_opacity = 0.4
         
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(browser_view)
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.addWidget(browser_view)
         
         # Animation for breathing effect
         self.anim = QVariantAnimation(self)
-        self.anim.setDuration(2500)
-        self.anim.setStartValue(0.4)
+        self.anim.setDuration(2000) # Slightly faster breath
+        self.anim.setStartValue(0.2)
         self.anim.setEndValue(1.0)
         self.anim.setLoopCount(-1)
         self.anim.setEasingCurve(QEasingCurve.InOutSine)
@@ -53,16 +85,19 @@ class RecordingContainer(QWidget):
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             
-            # Draw breathing border
+            # Draw breathing border (Native layer)
             color = QColor(211, 47, 47, int(255 * self.glow_opacity))
-            pen = QPen(color, 8)
+            pen = QPen(color, 12) # Thicker border
             painter.setPen(pen)
-            painter.drawRect(self.rect().adjusted(4, 4, -4, -4))
+            painter.drawRect(self.rect().adjusted(6, 6, -6, -6))
             
     def set_recording(self, active):
         if active:
+            # Add margins to reveal the border
+            self.main_layout.setContentsMargins(10, 10, 10, 10)
             self.anim.start()
         else:
+            self.main_layout.setContentsMargins(0, 0, 0, 0)
             self.anim.stop()
             self.update()
 
@@ -89,8 +124,11 @@ class PrimityBrowser(QMainWindow):
         self.kor_input_active = False # Local state for UI sync
         
         # Register Network Interceptor for Archiving
-        from PySide6.QtWebEngineCore import QWebEngineProfile
         QWebEngineProfile.defaultProfile().setUrlRequestInterceptor(self.archiver.interceptor)
+        
+        # Register Custom Archive Scheme (To bypass file:// sandboxing)
+        self.archive_handler = ArchiveSchemeHandler(self.archiver)
+        QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b"primity-archive", self.archive_handler)
         
         # Dragging support
         self._old_pos = None
