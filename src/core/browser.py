@@ -860,12 +860,20 @@ class PrimityBrowser(QMainWindow):
     def current_tab_changed(self, i):
         if self.tabs.count() > 0:
             widget = self.tabs.currentWidget()
-            if isinstance(widget, QWebEngineView):
-                qurl = widget.url()
+            
+            browser_view = None
+            if isinstance(widget, RecordingContainer):
+                browser_view = widget.browser_view
+            elif isinstance(widget, QWebEngineView):
+                browser_view = widget
+                
+            if browser_view:
+                qurl = browser_view.url()
                 self.update_url_bar(qurl, widget)
-                self.update_title(widget)
+                self.update_title(browser_view)
                 self.update_bookmark_indicator()
             else:
+                # Internal pages
                 self.url_bar.setText(f"primity://{type(widget).__name__.lower().replace('page','')}")
                 tab_text = self.tabs.tabText(i)
                 self.title_label.setText(f"{self.tr_text('Browser Name')} | {tab_text}")
@@ -913,9 +921,24 @@ class PrimityBrowser(QMainWindow):
             self.add_new_tab(q, "Loading...")
 
     def update_url_bar(self, q, browser=None):
-        if browser != self.tabs.currentWidget():
+        # Determine if this update is for the currently visible tab
+        current_widget = self.tabs.currentWidget()
+        is_current = (browser == current_widget)
+        if not is_current and isinstance(current_widget, RecordingContainer):
+            is_current = (browser == current_widget.browser_view)
+            
+        if not is_current:
             return
+            
         url_str = q.toString()
+        
+        # Masking: If it's a virtual archive protocol, show the REAL original URL
+        if q.scheme() == "primity-archive":
+            snap_id = q.host()
+            original_url = self.archiver.get_snapshot_url(snap_id)
+            if original_url:
+                url_str = original_url
+                
         self.url_bar.setText(url_str)
         self.url_bar.setCursorPosition(0)
         self.update_lock_icon(q)

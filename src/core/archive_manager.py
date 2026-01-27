@@ -259,5 +259,8 @@ class ArchiveManager(QObject):
     def get_snapshot_path(self, snapshot_id):
         return self.engine.get_snapshot_path(snapshot_id)
 
+    def get_snapshot_url(self, snapshot_id):
+        return self.engine.get_snapshot_url(snapshot_id)
+
     def get_injection_script(self):
         return ""

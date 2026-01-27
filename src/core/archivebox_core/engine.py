@@ -165,20 +165,30 @@ class ArchiveEngine:
         conn.close()
 
     def log_payload(self, snapshot_id, url, payload_b64):
-        """Save actual response body to DB for perfect replay."""
+        """Log actual response body (Base64) to DB."""
         import base64
         try:
-            payload_bytes = base64.b64decode(payload_b64)
+            payload_bin = base64.b64decode(payload_b64)
             conn = sqlite3.connect(self.db_path)
             c = conn.cursor()
-            c.execute("""
-                UPDATE core_networklog SET payload = ? 
-                WHERE snapshot_id = ? AND url = ?
-            """, (payload_bytes, snapshot_id, url))
+            c.execute("UPDATE core_networklog SET payload = ? WHERE snapshot_id = ? AND url = ?",
+                      (payload_bin, snapshot_id, url))
             conn.commit()
             conn.close()
-        except Exception as e:
-            print(f"Log Payload Error: {e}")
+        except:
+            pass
+
+    def get_snapshot_url(self, snapshot_id):
+        """Retrieve the original URL for a given snapshot ID."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            c.execute("SELECT url FROM core_snapshot WHERE id = ?", (snapshot_id,))
+            res = c.fetchone()
+            conn.close()
+            return res[0] if res else None
+        except:
+            return None
 
     def build_warc(self, snapshot_id, url):
         """Build a WARC file from captured data for this snapshot."""
