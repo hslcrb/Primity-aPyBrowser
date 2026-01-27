@@ -69,10 +69,10 @@ class ArchiveDashboard(QWidget):
         refresh_btn.clicked.connect(self.load_data)
         toolbar.addWidget(refresh_btn)
         
-        # Open Web UI
-        web_ui_btn = QPushButton("🌐 Open Web UI")
-        web_ui_btn.clicked.connect(lambda: self.browser.open_url("http://127.0.0.1:8000"))
-        toolbar.addWidget(web_ui_btn)
+        # Open Data folder
+        data_dir_btn = QPushButton("📂 Open Storage")
+        data_dir_btn.clicked.connect(self.open_storage_folder)
+        toolbar.addWidget(data_dir_btn)
         
         layout.addLayout(toolbar)
         
@@ -173,8 +173,17 @@ class ArchiveDashboard(QWidget):
             view_btn = QPushButton("👁️")
             view_btn.setToolTip("View Archive")
             view_btn.setFixedSize(32, 28)
-            timestamp = snap.get('timestamp', '')
-            local_url = f"http://127.0.0.1:8000/archive/{timestamp}/"
+            
+            snap_id = snap.get('id')
+            # Try to find the best file to open (mhtml -> dom -> index)
+            local_path = self.archiver.get_snapshot_path(snap_id)
+            import os
+            # Use MHTML if available, otherwise DOM, otherwise redirector
+            target_file = "output.mhtml" if os.path.exists(os.path.join(local_path, "output.mhtml")) else "dom.html"
+            if not os.path.exists(os.path.join(local_path, target_file)):
+                target_file = "index.html"
+                
+            local_url = QUrl.fromLocalFile(os.path.join(local_path, target_file)).toString()
             view_btn.clicked.connect(lambda _, u=local_url: self.browser.open_url(u))
             actions_layout.addWidget(view_btn)
             
@@ -255,3 +264,14 @@ class ArchiveDashboard(QWidget):
             self.browser.status.showMessage(f"Archiving: {url}", 3000)
         else:
             QMessageBox.warning(self, "Error", "No web page is currently active")
+
+    def open_storage_folder(self):
+        """Open the data/archive folder in system file explorer."""
+        import os
+        import subprocess
+        path = self.archiver.engine.archive_dir
+        if os.path.exists(path):
+            if os.name == 'nt': # Windows
+                os.startfile(path)
+            elif os.name == 'posix': # Linux/Mac
+                subprocess.Popen(['xdg-open', str(path)])

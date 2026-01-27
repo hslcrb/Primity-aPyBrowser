@@ -603,7 +603,10 @@ class PrimityBrowser(QMainWindow):
             if isinstance(self.tabs.currentWidget(), QWebEngineView):
                 current_url = self.tabs.currentWidget().url().toString()
                 
-            self.archiver.start_recording(current_url, "User Session", options)
+            curr = self.tabs.currentWidget()
+            browser_view = curr if isinstance(curr, QWebEngineView) else None
+            
+            self.archiver.start_recording(current_url, "User Session", options, browser_view=browser_view)
             self.rec_btn.setIcon(self.get_icon("circle_white"))
             self.rec_btn.setToolTip("Stop Archiving")
             self.status.showMessage("Archiving Started...", 2000)
@@ -623,7 +626,7 @@ class PrimityBrowser(QMainWindow):
         if ok and self.auto_rec_btn.isChecked():
             url = browser.url().toString()
             if not url.startswith("about:") and not url.startswith("primity:"):
-                self.archiver.start_recording(url, browser.title())
+                self.archiver.start_recording(url, browser.title(), browser_view=browser)
                 self.status.showMessage(f"Auto-Archiving: {browser.title()}...", 3000)
 
     def inject_archiver(self, browser):
