@@ -395,9 +395,34 @@ class PrimityBrowser(QMainWindow):
             curr.reload()
 
     def animate_reload(self, value):
-        # Rotate the reload icon (simplified by just changing icon states)
-        # Real rotation requires a custom widget for the action
-        pass
+        # Rotate the reload icon based on value (0-360)
+        pixmap = self.get_icon("reload_yellow").pixmap(24, 24)
+        if pixmap.isNull(): return
+        
+        from PySide6.QtGui import QTransform, QPainter
+        
+        # Create a new pixmap for rotation
+        rotated_pixmap = QPixmap(pixmap.size())
+        rotated_pixmap.fill(Qt.transparent)
+        
+        painter = QPainter(rotated_pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        
+        # Center of the pixmap
+        center = pixmap.rect().center()
+        
+        # Translate to center, rotate, translate back
+        transform = QTransform()
+        transform.translate(center.x(), center.y())
+        transform.rotate(value)
+        transform.translate(-center.x(), -center.y())
+        
+        painter.setTransform(transform)
+        painter.drawPixmap(0, 0, pixmap)
+        painter.end()
+        
+        self.reload_btn.setIcon(QIcon(rotated_pixmap))
 
     def start_reload_anim(self, browser):
         if browser == self.tabs.currentWidget():
