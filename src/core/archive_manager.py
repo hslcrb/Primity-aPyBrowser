@@ -86,10 +86,27 @@ class ArchiveManager(QObject):
     def start_recording(self, url, title="", options=None, browser_view=None):
         """High-level entry point for archiving."""
         self.is_recording = True
+        
+        # Set default options if none provided (Manual REC click)
+        if not options:
+            options = {
+                "depth": 0,
+                "extractors": {
+                    "wget": True, 
+                    "singlefile": True, 
+                    "screenshot": True, 
+                    "dom": True
+                }
+            }
+            
         self.status_msg.emit(f"Starting Native Archive: {url}...")
         
         # 1. Create entry in DB and dir
-        self.current_snapshot_id = self.engine.add(url, title, extractors=options.get('extractors') if options else None)
+        self.current_snapshot_id = self.engine.add(
+            url, title, 
+            depth=options.get("depth", 0),
+            extractors=options.get('extractors')
+        )
         snapshot_id = self.current_snapshot_id
         snap_path = Path(self.engine.get_snapshot_path(snapshot_id))
         
