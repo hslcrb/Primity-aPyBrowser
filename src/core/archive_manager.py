@@ -175,8 +175,12 @@ class ArchiveManager(QObject):
         return snapshot_id
 
     def _run_ytdlp(self, url, snap_path, snapshot_id):
-        """Run yt-dlp to extract video/audio if possible."""
+        """Run yt-dlp only for recognized video platforms."""
         import subprocess
+        video_platforms = ["youtube.com", "youtu.be", "vimeo.com", "dailymotion.com", "twitch.tv", "tiktok.com"]
+        if not any(p in url.lower() for p in video_platforms):
+            return # Skip non-video sites
+            
         try:
             media_path = snap_path / "media"
             media_path.mkdir(exist_ok=True)
@@ -185,7 +189,8 @@ class ArchiveManager(QObject):
                 "-o", f"{media_path}/%(title)s.%(ext)s",
                 url
             ]
-            subprocess.Popen(cmd)
+            # Run in background to not block
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.engine._log_result(snapshot_id, "media", "success", "media/")
         except Exception as e:
             self.engine._log_result(snapshot_id, "media", "failed", str(e))
