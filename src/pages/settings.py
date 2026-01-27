@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, 
-                             QComboBox, QLineEdit, QHBoxLayout, QScrollArea)
+                             QComboBox, QLineEdit, QHBoxLayout, QScrollArea, QTextBrowser)
 from src.config.constants import TRANSLATIONS
+from src.config.manual import MANUAL_KO, MANUAL_EN
 from src.ui.components import MinimalCard
 
 class SettingsPage(QWidget):
@@ -137,7 +138,29 @@ class SettingsPage(QWidget):
         path_layout.addWidget(path_btn)
         
         arc_layout.addLayout(path_layout)
+        arc_layout.addLayout(path_layout)
         layout.addWidget(arc_card)
+        
+        # --- USER MANUAL ---
+        manual_card = MinimalCard()
+        manual_layout = QVBoxLayout(manual_card)
+        manual_layout.setContentsMargins(30, 30, 30, 30)
+        
+        manual_title = QLabel(self.tr("User Manual"))
+        manual_title.setStyleSheet("font-size: 20px; font-weight: bold; color: white; margin-bottom: 10px;")
+        manual_layout.addWidget(manual_title)
+        
+        self.manual_browser = QTextBrowser()
+        self.manual_browser.setOpenExternalLinks(True)
+        self.manual_browser.setStyleSheet("background-color: transparent; border: none; color: #ccc; font-size: 14px;")
+        
+        # Markdown Content based on Language
+        content = MANUAL_KO if self.lang == 'ko' else MANUAL_EN
+        self.manual_browser.setMarkdown(content)
+        self.manual_browser.setFixedHeight(400) # Fixed height for manual section
+        
+        manual_layout.addWidget(self.manual_browser)
+        layout.addWidget(manual_card)
         
         # --- SYSTEM ---
         sys_card = MinimalCard()

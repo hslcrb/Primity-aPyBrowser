@@ -46,7 +46,11 @@ TRANSLATIONS = {
         'Are you sure you want to reset all settings to defaults?': '모든 설정을 초기 상태로 되돌리시겠습니까?',
         'Export Browser Data': '브라우저 데이터 내보내기',
         'Import Browser Data': '브라우저 데이터 가져오기',
-        'Data Management': '데이터 관리'
+        'Data Management': '데이터 관리',
+        'User Manual': '사용 설명서',
+        'Archive Settings': '아카이브 설정',
+        'Storage Path (Requires Restart)': '저장 경로 (재시작 필요)',
+        'Change...': '변경...'
     },
     'en': {
         'Back': 'Back',
