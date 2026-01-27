@@ -10,7 +10,7 @@ from PySide6.QtWebEngineCore import QWebEngineSettings
 
 from src.config.constants import TRANSLATIONS, DEFAULT_SETTINGS
 from src.ui.styles import get_stylesheet
-from src.ui.components import MinimalCard
+from src.ui.components import MinimalCard, BookmarkDialog
 from src.pages.passwords import PasswordPage
 from src.pages.settings import SettingsPage
 from src.utils.helpers import generate_strong_password
@@ -439,24 +439,69 @@ class PrimityBrowser(QMainWindow):
 
     def add_bookmark(self):
         widget = self.tabs.currentWidget()
-        if isinstance(widget, QWebEngineView):
-            url = widget.url().toString()
-            title = widget.title()
+        if not isinstance(widget, QWebEngineView): return
+
+        url = widget.url().toString()
+        title = widget.title()
+        
+        # 1. State Analysis: Is it already bookmarked?
+        current_coll = "Bookmarks Bar"
+        found_name = title
+        is_existing = False
+        
+        # Search existing
+        for coll, items in self.bookmarks.items():
+            if isinstance(items, dict):
+                for name, link in items.items():
+                    if link == url:
+                        current_coll = coll
+                        found_name = name
+                        is_existing = True
+                        break
+            if is_existing: break
             
-            # UX: Ask for collection
-            collections = list(self.bookmarks.keys())
-            if not collections: collections = ["Default"]
+        collections = list(self.bookmarks.keys())
+        if not collections: collections = ["Bookmarks Bar"]
+        
+        # 2. Show Dialog
+        dlg = BookmarkDialog(self, found_name, url, collections, current_coll)
+        if dlg.exec():
+            action = dlg.action_code
+            data = dlg.result_data
             
-            coll, ok = QInputDialog.getItem(self, self.tr_text("Add Bookmark"), 
-                                          self.tr_text("Select Collection:"), collections, 0, True)
-            if ok and coll:
-                if coll not in self.bookmarks or not isinstance(self.bookmarks[coll], dict):
-                    self.bookmarks[coll] = {}
-                self.bookmarks[coll][title] = url
+            if action == 'delete':
+                if is_existing:
+                    # Remove from old collection
+                    if current_coll in self.bookmarks and found_name in self.bookmarks[current_coll]:
+                        del self.bookmarks[current_coll][found_name]
+                        # Cleanup empty collections if needed, or keep them
+                        self.save_bookmarks()
+                        self.update_bookmark_indicator()
+                        self.menu_btn_widget.setMenu(self.create_menu())
+                        self.status.showMessage("Bookmark Removed", 2000)
+            
+            elif action == 'save':
+                new_coll = data['collection']
+                new_name = data['name']
+                
+                # If editing, remove old entry first
+                if is_existing:
+                    if current_coll in self.bookmarks and found_name in self.bookmarks[current_coll]:
+                        del self.bookmarks[current_coll][found_name]
+                
+                # Add to new collection
+                if new_coll not in self.bookmarks:
+                    self.bookmarks[new_coll] = {}
+                elif not isinstance(self.bookmarks[new_coll], dict):
+                    # legacy support or type mismatch fix
+                    self.bookmarks[new_coll] = {}
+                    
+                self.bookmarks[new_coll][new_name] = url
+                
                 self.save_bookmarks()
                 self.update_bookmark_indicator()
                 self.menu_btn_widget.setMenu(self.create_menu())
-                self.status.showMessage(f"Bookmarked to {coll}: {title}", 2000)
+                self.status.showMessage(f"Saved to {new_coll}", 2000)
 
     def update_bookmark_indicator(self):
         widget = self.tabs.currentWidget()
