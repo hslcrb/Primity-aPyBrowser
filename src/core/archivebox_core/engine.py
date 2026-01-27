@@ -205,6 +205,49 @@ class ArchiveEngine:
             self._log_result(snapshot_id, "warc", "failed", str(e))
             return False
 
+    def export_network_logs(self, snapshot_id, output_path):
+        """Export all network logs for this snapshot to a JSON file."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute("SELECT * FROM core_networklog WHERE snapshot_id = ?", (snapshot_id,))
+            rows = c.fetchall()
+            logs = [dict(r) for r in rows]
+            conn.close()
+            
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(logs, f, indent=2)
+            return True
+        except:
+            return False
+
+    def build_wacz(self, snapshot_id):
+        """Create a WACZ compatible zip file containing WARC and metadata."""
+        import zipfile
+        wacz_path = self.data_dir / "archives" / f"{snapshot_id}.wacz"
+        wacz_path.parent.mkdir(exist_ok=True)
+        
+        warc_file = self.warc_dir / f"{snapshot_id}.warc.gz"
+        
+        try:
+            with zipfile.ZipFile(wacz_path, 'w') as z:
+                # 1. Add WARC
+                if warc_file.exists():
+                    z.write(warc_file, "archive/data.warc.gz")
+                
+                # 2. Add Network Logs (Metadata)
+                log_temp = self.data_dir / f"tmp_{snapshot_id}.json"
+                if self.export_network_logs(snapshot_id, log_temp):
+                    z.write(log_temp, "metadata/network_logs.json")
+                    log_temp.unlink()
+            
+            self._log_result(snapshot_id, "wacz", "success", f"archives/{snapshot_id}.wacz")
+            return True
+        except Exception as e:
+            self._log_result(snapshot_id, "wacz", "failed", str(e))
+            return False
+
     def delete(self, snapshot_id):
         """Delete snapshot files and DB entries."""
         try:

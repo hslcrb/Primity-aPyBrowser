@@ -707,6 +707,16 @@ class PrimityBrowser(QMainWindow):
             # Auto Archive Hook
             widget.loadFinished.connect(lambda ok, b=widget: self.handle_auto_archive(ok, b))
             
+            # Replay Mocking Hook (For local archive files)
+            def inject_replay_if_local(ok, browser):
+                if ok and browser.url().isLocalFile() and "/data/archive/" in browser.url().toString():
+                    replay_path = os.path.join(os.getcwd(), 'assets', 'archive_replay.js')
+                    if os.path.exists(replay_path):
+                        with open(replay_path, 'r') as f:
+                            browser.page().runJavaScript(f.read())
+            
+            widget.loadFinished.connect(inject_replay_if_local)
+            
             # Favicon Support
             widget.iconChanged.connect(lambda icon, browser=widget:
                                        self.tabs.setTabIcon(self.tabs.indexOf(browser), icon))
