@@ -34,6 +34,9 @@ def main():
     sys.argv.append("--allow-running-insecure-content")
     sys.argv.append("--autoplay-policy=no-user-gesture-required")
     sys.argv.append("--allow-file-access-from-files")
+    sys.argv.append("--test-type")
+    sys.argv.append("--disable-site-isolation-trials")
+    sys.argv.append("--disable-features=IsolateOrigins,site-per-process")
     
     app = QApplication(sys.argv)
     app.setApplicationName("Primity")

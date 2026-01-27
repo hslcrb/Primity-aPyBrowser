@@ -175,14 +175,14 @@ class ArchiveDashboard(QWidget):
             view_btn.setFixedSize(32, 28)
             
             snap_id = snap.get('id')
-            # Try to find the best file to open (Prioritize wget for script stability, then MHTML)
+            # Try to find the best file to open (Prioritize wget, then MHTML, then DOM)
             local_path = self.archiver.get_snapshot_path(snap_id)
             import os
             
-            # Wget usually gives the cleanest standard HTML
             wget_index = os.path.join(local_path, "wget", "index.html")
             mhtml_file = os.path.join(local_path, "output.mhtml")
             dom_file = os.path.join(local_path, "dom.html")
+            default_index = os.path.join(local_path, "index.html")
             
             if os.path.exists(wget_index):
                 target_file_path = wget_index
@@ -191,7 +191,7 @@ class ArchiveDashboard(QWidget):
             elif os.path.exists(dom_file):
                 target_file_path = dom_file
             else:
-                target_file_path = os.path.join(local_path, "index.html")
+                target_file_path = default_index
                 
             local_url = QUrl.fromLocalFile(target_file_path).toString()
             view_btn.clicked.connect(lambda _, u=local_url: self.browser.open_url(u))

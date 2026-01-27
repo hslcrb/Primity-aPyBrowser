@@ -6,6 +6,7 @@ High-fidelity capture using Qt WebEngine native capabilities.
 """
 
 import os
+import json
 from PySide6.QtCore import QObject, Signal, Slot, QThread, QTimer, QByteArray
 from PySide6.QtWebEngineCore import QWebEngineDownloadRequest, QWebEngineUrlRequestInterceptor
 from PySide6.QtWebChannel import QWebChannel
@@ -102,7 +103,7 @@ class ArchiveManager(QObject):
             test_file.touch()
             test_file.unlink()
             self.data_dir = primary_data
-        except PermissionError:
+        except:
             self.data_dir = Path(os.getcwd()) / 'data_native'
             self.data_dir.mkdir(parents=True, exist_ok=True)
             
@@ -112,6 +113,14 @@ class ArchiveManager(QObject):
         self.interceptor = ArchiveInterceptor(self)
         self.recorder = PrimityRecorder(self)
         self.recorder.data_received.connect(self.engine.log_payload)
+
+    def _on_finished(self, success, msg):
+        """Handle background worker completion."""
+        self.is_recording = False
+        if success:
+            self.status_msg.emit(f"✅ {msg}")
+        else:
+            self.status_msg.emit(f"❌ Error: {msg}")
 
     def update_storage_path(self, new_path):
         """Update storage path dynamically."""
@@ -140,7 +149,7 @@ class ArchiveManager(QObject):
             
         self.status_msg.emit(f"Initializing Archive: {url}...")
         
-        # 1. Create entry in DB and dir (FAST SYNC)
+        # 1. Create entry in DB and dir
         self.current_snapshot_id = self.engine.add(
             url, title, 
             depth=options.get("depth", 0),
@@ -151,7 +160,6 @@ class ArchiveManager(QObject):
         
         # 2. Native High-Fidelity Capture (Instant parts on UI Thread)
         if browser_view:
-            # We wrap this to be safe
             try:
                 self._do_native_capture(snapshot_id, snap_path, browser_view, options)
             except Exception as e:
@@ -177,7 +185,6 @@ class ArchiveManager(QObject):
                 "-o", f"{media_path}/%(title)s.%(ext)s",
                 url
             ]
-            # Run in background to not block
             subprocess.Popen(cmd)
             self.engine._log_result(snapshot_id, "media", "success", "media/")
         except Exception as e:
@@ -187,7 +194,7 @@ class ArchiveManager(QObject):
         """Perform screenshot and MHTML capture using Qt WebEngine."""
         extractors = options.get('extractors', {}) if options else {"screenshot": True, "singlefile": True}
         
-        # A. Screenshot (Instant)
+        # A. Screenshot
         if extractors.get('screenshot'):
             try:
                 img_path = snap_path / "screenshot.png"
@@ -196,13 +203,11 @@ class ArchiveManager(QObject):
             except Exception as e:
                 self.engine._log_result(snapshot_id, "screenshot", "failed", str(e))
 
-        # B. MHTML (SingleFile equivalent) - Async
+        # B. MHTML
         if extractors.get('singlefile'):
             try:
                 mhtml_path = snap_path / "output.mhtml"
-                # Note: save() logic might require careful handling of completion
                 view.page().save(str(mhtml_path), QWebEngineDownloadRequest.MimeHtmlSaveFormat)
-                # We log it as success assuming it starts; in a real app, we'd watch the download item.
                 self.engine._log_result(snapshot_id, "singlefile", "success", "output.mhtml")
             except Exception as e:
                 self.engine._log_result(snapshot_id, "singlefile", "failed", str(e))
@@ -211,8 +216,8 @@ class ArchiveManager(QObject):
         if extractors.get('dom'):
             view.page().toHtml(lambda html, sid=snapshot_id, sp=snap_path: self._save_dom(sid, sp, html))
             
-        # D. PDF (Native)
-        if extractors.get('pdf', True): # Default on
+        # D. PDF
+        if extractors.get('pdf', True):
             pdf_path = snap_path / "output.pdf"
             view.page().printToPdf(str(pdf_path))
             self.engine._log_result(snapshot_id, "pdf", "success", "output.pdf")
@@ -224,13 +229,6 @@ class ArchiveManager(QObject):
             self.engine._log_result(sid, "dom", "success", "dom.html")
         except:
             pass
-
-    def _on_finished(self, success, msg):
-        self.is_recording = False
-        if success:
-            self.status_msg.emit(f"✅ {msg}")
-        else:
-            self.status_msg.emit(f"❌ Error: {msg}")
 
     @Slot()
     def stop_recording(self):
