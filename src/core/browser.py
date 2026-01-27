@@ -8,6 +8,7 @@ from PySide6.QtCore import QUrl, QSettings, Qt, Signal, QObject, Slot, QPoint, Q
 from PySide6.QtGui import QAction, QIcon, QPixmap, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
+from PySide6.QtWebChannel import QWebChannel
 
 from src.config.constants import TRANSLATIONS, DEFAULT_SETTINGS
 from src.ui.styles import get_stylesheet
@@ -744,7 +745,7 @@ class PrimityBrowser(QMainWindow):
                         with open(replay_path, 'r') as f:
                             browser.page().runJavaScript(f.read())
             
-            widget.loadFinished.connect(inject_replay_if_local)
+            widget.loadFinished.connect(lambda ok, b=widget: inject_replay_if_local(ok, b))
             
             # Favicon Support
             widget.iconChanged.connect(lambda icon, browser=widget:
