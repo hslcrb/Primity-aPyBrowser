@@ -183,7 +183,7 @@ class PrimityBrowser(QMainWindow):
         self.navbar.addWidget(self.url_bar)
 
         # Archive (REC) Button - Placed right after URL Bar
-        self.rec_btn = QAction(self.get_icon("circle_black"), "", self)
+        self.rec_btn = QAction(self.get_icon("circle_red"), "", self)
         self.rec_btn.setToolTip("Start Archiving (REC)")
         self.rec_btn.triggered.connect(self.toggle_recording)
         self.navbar.addAction(self.rec_btn)
@@ -548,7 +548,7 @@ class PrimityBrowser(QMainWindow):
     def toggle_recording(self):
         if self.archiver.is_recording:
             self.archiver.stop_recording()
-            self.rec_btn.setIcon(self.get_icon("circle_black"))
+            self.rec_btn.setIcon(self.get_icon("circle_red"))
             self.rec_btn.setToolTip("Start Archiving (REC)")
             self.status.showMessage("Archiving Stopped", 2000)
         else:
@@ -557,7 +557,7 @@ class PrimityBrowser(QMainWindow):
                 current_url = self.tabs.currentWidget().url().toString()
                 
             self.archiver.start_recording(current_url, "User Session")
-            self.rec_btn.setIcon(self.get_icon("circle_red"))
+            self.rec_btn.setIcon(self.get_icon("circle_white"))
             self.rec_btn.setToolTip("Stop Archiving")
             self.status.showMessage("Archiving Started...", 2000)
             
