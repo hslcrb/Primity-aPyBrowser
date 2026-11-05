@@ -3,6 +3,10 @@
 __pycache__
 *.pyc
 .pytest_cache
+.DS_Store
+*.spec
+Dockerfile
+.dockerignore
 build
 dist
 data
