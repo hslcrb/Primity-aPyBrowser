@@ -23,11 +23,17 @@
 
 ## 작업
 
-- [ ] 1. 저장소·주소 해석 테스트를 먼저 실패시킨 후 `workspaces.py`, `navigation.py` 구현. 원자적 저장 및 경로 분리 검증 후 커밋.
-- [ ] 2. Chrome 명령 구성 테스트 실패 후 `chrome_launcher.py` 구현. 전용 프로필과 인자 검증 후 커밋.
-- [ ] 3. 실제 Qt 프로필 격리 테스트 실패 후 `profiles.py`, `webpage.py` 구현. 쿠키·스토리지·팝업 경계 검증 후 커밋.
-- [ ] 4. `browser.py`, 새 탭 UI, 앱 진입점 통합. 탐색·단축키·작업공간·다운로드 동작 검사 후 작은 단위로 커밋.
-- [ ] 5. README·사용법·로컬 검증/패키징 안내와 작업 증거 정리. 전체 테스트·컴파일·GUI 스모크·독립 코드 리뷰.
-- [ ] 6. 원격 diff·활성 workflow 부재·양쪽 SHA 재확인. API로 2부모 merge commit 생성 및 기본 ref 갱신, 원격 읽기 검증.
+- [x] 1. 저장소·주소 해석 테스트를 먼저 실패시킨 후 `workspaces.py`, `navigation.py` 구현. 원자적 저장 및 경로 분리 검증 후 커밋.
+- [x] 2. Chrome 명령 구성 테스트 실패 후 `chrome_launcher.py` 구현. 전용 프로필과 인자 검증 후 커밋.
+- [x] 3. 실제 Qt 프로필 격리 테스트 실패 후 `profiles.py`, `webpage.py` 구현. 쿠키·스토리지·팝업 경계 검증 후 커밋.
+- [x] 4. `browser.py`, 새 탭 UI, 앱 진입점 통합. 탐색·단축키·작업공간·다운로드 동작 검사 후 작은 단위로 커밋.
+- [x] 5. README·사용법·로컬 검증/패키징 안내와 작업 증거 정리. 전체 테스트·컴파일·GUI 스모크·독립 코드 리뷰.
+
+## 마지막 통합 게이트
+
+문서를 포함한 최종 원격 diff·활성 workflow 부재·양쪽 SHA를 재확인한다. API로 첫 부모가 최신 main, 둘째 부모가 검증된 작업 head인 merge commit을 생성하고 `expected_sha`, `force=false`로 main을 갱신한다. 그 뒤 원격 ref·부모·tree와 작업 브랜치 포함 여부를 읽어 검증한다. 이 문서는 통합 전 스냅샷이며, 실제 완료 증거는 `**main** merge:` 커밋과 작업 완료 보고의 SHA·원격 읽기 결과다.
+
+검증된 제품 상태: 77 tests passed, compileall 통과, Linux onedir 빌드·로컬 웹페이지/JavaScript 기동 확인. 상세는 [검증 기록](../../verification-20261105.md)을 참조한다.
 
 실행 기록은 [작업 대장](../../tasks/20261105-workspaces.md)에 계속 남긴다.
+
