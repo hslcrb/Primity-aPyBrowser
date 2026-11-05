@@ -205,8 +205,8 @@ class PrimityBrowser(QMainWindow):
             ("Ctrl+L", self.focus_address), ("Ctrl+T", lambda: self.add_new_tab()),
             ("Ctrl+W", lambda: self.close_current_tab(self.tabs.currentIndex())),
             ("Ctrl+Shift+T", self.restore_closed_tab),
-            ("Ctrl+N", lambda: self.controller.open_workspace(self.workspace.id, new_window=True)),
-            ("Ctrl+Shift+N", lambda: self.controller.open_private(self.workspace.id)),
+            ("Ctrl+N", self.new_window),
+            ("Ctrl+Shift+N", self.new_private_window),
             ("Ctrl+Tab", lambda: self.cycle_tab(1)), ("Ctrl+Shift+Tab", lambda: self.cycle_tab(-1)),
             ("Ctrl+F", self.open_find), ("Escape", self.escape),
             ("F5", lambda: self.with_view("reload")), ("Ctrl+=", lambda: self.zoom(0.1)),
@@ -236,7 +236,7 @@ class PrimityBrowser(QMainWindow):
             self.tabs.setCurrentIndex((self.tabs.currentIndex() + direction) % self.tabs.count())
 
     def add_new_tab(self, url=None, *, focus=True):
-        url = url.toString() if isinstance(url, QUrl) else url
+        url = url.toString(QUrl.FullyEncoded) if isinstance(url, QUrl) else url
         widget = self._new_tab_widget() if url is None or url == NEW_TAB else self._make_view()
         index = self.tabs.addTab(widget, self.t("새 탭", "New tab"))
         if focus:
@@ -316,7 +316,7 @@ class PrimityBrowser(QMainWindow):
         if self._closing or not hasattr(self, "connection_label"):
             return
         view = self.active_view()
-        url = view.url().toString() if view else NEW_TAB
+        url = view.url().toString(QUrl.FullyEncoded) if view else NEW_TAB
         if not self.url_bar.hasFocus():
             self.url_bar.setText("" if url in {NEW_TAB, "about:blank"} else url)
         self.back_action.setEnabled(bool(view and view.history().canGoBack()))
@@ -370,8 +370,8 @@ class PrimityBrowser(QMainWindow):
             return
         widget = self.tabs.widget(index)
         if isinstance(widget, QWebEngineView):
-            if is_web_url(widget.url().toString()):
-                self._closed_tabs.append(widget.url().toString())
+            if is_web_url(widget.url().toString(QUrl.FullyEncoded)):
+                self._closed_tabs.append(widget.url().toString(QUrl.FullyEncoded))
             widget.stop()
         self.tabs.removeTab(index)
         widget.deleteLater()
@@ -414,18 +414,35 @@ class PrimityBrowser(QMainWindow):
     def toggle_fullscreen(self):
         self.showNormal() if self.isFullScreen() else self.showFullScreen()
 
+    def request_workspace(self, ident, *, new_window=False):
+        try:
+            return self.controller.open_workspace(ident, new_window=new_window)
+        except (WorkspaceError, OSError) as error:
+            inform(self, "Primity", str(error), error=True)
+            return None
+
+    def new_private_window(self):
+        try:
+            return self.controller.open_private(self.workspace.id)
+        except (WorkspaceError, OSError) as error:
+            inform(self, "Primity", str(error), error=True)
+            return None
+
+    def new_window(self):
+        return self.new_private_window() if self.private else self.request_workspace(
+            self.workspace.id, new_window=True)
+
     def show_workspace_menu(self):
         menu = QMenu(self)
         for workspace in self.store.list():
             action = menu.addAction(workspace.name)
             action.setCheckable(True)
             action.setChecked(workspace.id == self.workspace.id and not self.private)
-            action.triggered.connect(lambda checked=False, ident=workspace.id: self.controller.open_workspace(ident))
+            action.triggered.connect(lambda checked=False, ident=workspace.id: self.request_workspace(ident))
         menu.addSeparator()
         menu.addAction(self.t("+ 새 작업공간", "+ New workspace"), self.create_workspace)
         menu.addAction(self.t("이 작업공간 이름 변경", "Rename this workspace"), self.rename_workspace)
-        menu.addAction(self.t("새 시크릿 창", "New private window"),
-                       lambda: self.controller.open_private(self.workspace.id))
+        menu.addAction(self.t("새 시크릿 창", "New private window"), self.new_private_window)
         menu.exec(self.workspace_button.mapToGlobal(self.workspace_button.rect().bottomLeft()))
         menu.deleteLater()
 
@@ -489,10 +506,8 @@ class PrimityBrowser(QMainWindow):
         menu = QMenu(self)
         menu.addAction(self.t("새 탭", "New tab"), lambda: self.add_new_tab())
         menu.addAction(self.t("닫은 탭 다시 열기", "Reopen closed tab"), self.restore_closed_tab)
-        menu.addAction(self.t("새 창", "New window"),
-                       lambda: self.controller.open_workspace(self.workspace.id, new_window=True))
-        menu.addAction(self.t("새 시크릿 창", "New private window"),
-                       lambda: self.controller.open_private(self.workspace.id))
+        menu.addAction(self.t("새 창", "New window"), self.new_window)
+        menu.addAction(self.t("새 시크릿 창", "New private window"), self.new_private_window)
         menu.addSeparator()
         bookmarks = menu.addMenu(self.t("이 작업공간의 북마크", "Workspace bookmarks"))
         try:
@@ -520,9 +535,9 @@ class PrimityBrowser(QMainWindow):
 
     def toggle_bookmark(self):
         view = self.active_view()
-        if self.private or view is None or not is_web_url(view.url().toString()):
+        if self.private or view is None or not is_web_url(view.url().toString(QUrl.FullyEncoded)):
             return
-        url = view.url().toString()
+        url = view.url().toString(QUrl.FullyEncoded)
         try:
             items = self.store.bookmarks(self.workspace.id)
             if any(item["url"] == url for item in items):
@@ -570,7 +585,7 @@ class PrimityBrowser(QMainWindow):
             "Open installed Google Chrome with a profile dedicated to this workspace.\n\nNormal Chrome stays separate. Primity sign-ins are not copied; sign in again. Chrome Sync is configured in Chrome's own profile menu.\n\nContinue?")
         if confirm(self, self.t("Chrome 연결", "Chrome connection"), message):
             view = self.active_view()
-            url = view.url().toString() if view and is_web_url(view.url().toString()) else "https://www.google.com/"
+            url = view.url().toString(QUrl.FullyEncoded) if view and is_web_url(view.url().toString(QUrl.FullyEncoded)) else "https://www.google.com/"
             try:
                 launch_chrome(self.store.path(self.workspace.id, "chrome"), url)
                 self.statusBar().showMessage(self.t("Chrome 실행을 요청했습니다.", "Chrome launch requested."), 5000)
@@ -623,6 +638,7 @@ class PrimityBrowser(QMainWindow):
         download.receivedBytesChanged.connect(update)
         download.totalBytesChanged.connect(update)
         download.stateChanged.connect(update)
+        download.isFinishedChanged.connect(update)
         download.accept()
         progress.show()
 

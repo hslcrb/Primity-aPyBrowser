@@ -2,6 +2,9 @@
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
+import subprocess
+import sys
 import threading
 import time
 
@@ -45,7 +48,16 @@ def load(app, view, url):
 def site():
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
-            if self.path.startswith("/sw.js"):
+            if self.path.startswith("/download"):
+                body = ("Primity download " + self.headers.get("Cookie", "none")).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/octet-stream")
+                self.send_header("Content-Disposition", 'attachment; filename="workspace.txt"')
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            elif self.path.startswith("/sw.js"):
                 body = b"self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(clients.claim()));"
                 content_type = "text/javascript"
             else:
@@ -139,14 +151,85 @@ def test_private_windows_have_no_shared_account(qapp, controller, site):
     assert not private.bookmark_action.isEnabled()
 
 
-def test_popup_page_stays_in_its_workspace(qapp, controller, site):
+def test_popup_page_stays_in_its_workspace(qapp, controller, site, monkeypatch):
+    monkeypatch.setattr("src.core.webpage.confirm", lambda *args: True)
     window = controller.open_workspace(controller.store.active_id)
     view = window.add_new_tab(site)
     load(qapp, view, site)
     js(qapp, view, "document.cookie='account=A; path=/';")
-    # Same production factory used by newWindowRequested.openIn().
-    popup = window.new_popup_page()
-    assert popup.profile() is view.page().profile()
-    assert popup.webChannel() is None
-    assert popup is not view.page()
+    count = window.tabs.count()
+    js(qapp, view, "window.open('/popup?scope=read%20write', '_blank'); 'requested'")
+    wait_until(qapp, lambda: window.tabs.count() == count + 1)
+    popup = window.active_view()
+    wait_until(qapp, lambda: popup.url().path() == "/popup" and not popup._loading)
+    assert popup.page().profile() is view.page().profile()
+    assert popup.page().webChannel() is None
+    assert js(qapp, popup, "window.opener !== null") is True
+    assert js(qapp, popup, "document.cookie") == "account=A"
+    js(qapp, popup, "window.close(); 'closed'")
+    wait_until(qapp, lambda: window.tabs.count() == count)
+
+
+def test_encoded_urls_and_web_document_frames_are_supported(qapp, controller, site):
+    window = controller.open_workspace(controller.store.active_id)
+    view = window.add_new_tab("about:blank")
+    load(qapp, view, site + "/encoded%20path?q=hello%20world")
+    js(qapp, view, """
+        window.frameMessages=[];
+        window.addEventListener('message', e=>window.frameMessages.push(e.data));
+        let a=document.createElement('iframe');
+        a.srcdoc="<script>parent.postMessage('srcdoc','*')<"+"/script>";document.body.append(a);
+        let b=document.createElement('iframe');
+        b.src='data:text/html,'+encodeURIComponent("<script>parent.postMessage('data','*')<"+"/script>");document.body.append(b);
+        let c=document.createElement('iframe');
+        c.src=URL.createObjectURL(new Blob(["<script>parent.postMessage('blob','*')<"+"/script>"],{type:'text/html'}));document.body.append(c);
+    """)
+    wait_until(qapp, lambda: js(qapp, view, "window.frameMessages.length") == 3)
+    assert js(qapp, view, "JSON.stringify(window.frameMessages.sort())") == '["blob","data","srcdoc"]'
+
+
+def test_download_is_saved_from_the_requesting_workspace(qapp, controller, site, tmp_path, monkeypatch):
+    destination = tmp_path / "workspace.txt"
+    monkeypatch.setattr("src.core.browser.QFileDialog.getSaveFileName", lambda *args: (str(destination), ""))
+    window = controller.open_workspace(controller.store.active_id)
+    view = window.add_new_tab("about:blank")
+    load(qapp, view, site)
+    js(qapp, view, "document.cookie='account=A; path=/';")
+    view.setUrl(QUrl(site + "/download"))
+    wait_until(qapp, lambda: destination.exists() and not window._downloads)
+    assert destination.read_text() == "Primity download account=A"
+
+
+def test_persistent_login_survives_a_real_process_restart(site, tmp_path):
+    from pathlib import Path
+    fixture = Path(__file__).parent / "fixtures/profile_session.py"
+    results = []
+    for phase in ("write", "read"):
+        run = subprocess.run([sys.executable, str(fixture), str(tmp_path), site, phase],
+                             capture_output=True, text=True, timeout=30, env=os.environ.copy())
+        assert run.returncode == 0, run.stdout + run.stderr
+        result = next(line for line in run.stdout.splitlines() if line.startswith("RESULT="))
+        results.append(json.loads(result.removeprefix("RESULT=")))
+    assert results[1] == {"cookie": "account=persistent-A", "storage": "persistent-A"}
+
+
+def test_new_window_from_private_mode_stays_private(qapp, controller):
+    private = controller.open_private(controller.store.active_id)
+    other = private.new_window()
+    assert other.private
+    assert other.profile.isOffTheRecord()
+    assert other.profile is not private.profile
+
+
+def test_workspace_switch_reports_corrupt_preferences(qapp, controller, monkeypatch):
+    window = controller.open_workspace(controller.store.active_id)
+    other = controller.store.create("Broken")
+    path = controller.store.path(other.id, "state") / "preferences.json"
+    path.write_text("not-json")
+    messages = []
+    monkeypatch.setattr("src.core.browser.inform", lambda *args, **kwargs: messages.append(args[2]))
+    assert window.request_workspace(other.id) is None
+    assert messages
+    assert path.read_text() == "not-json"
+
 
