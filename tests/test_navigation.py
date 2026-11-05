@@ -9,6 +9,9 @@ from src.core.navigation import address_to_url, is_web_url, safe_external_url
     ("localhost:3000", "http://localhost:3000"),
     ("127.0.0.1:8080/a", "http://127.0.0.1:8080/a"),
     ("[::1]:3000", "http://[::1]:3000"),
+    ("example.com:8443/path", "https://example.com:8443/path"),
+    ("www.figma.com:443", "https://www.figma.com:443"),
+    ("[2001:db8::1]:8080", "https://[2001:db8::1]:8080"),
     ("primity://newtab", "primity://newtab"),
 ])
 def test_addresses(text, expected):

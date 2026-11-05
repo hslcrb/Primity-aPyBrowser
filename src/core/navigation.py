@@ -15,6 +15,7 @@ def safe_external_url(value: str) -> str:
     if any(ord(char) < 32 or ord(char) == 127 for char in value) or "\\" in value:
         raise ValueError("주소에 허용되지 않는 문자가 있습니다. / Invalid URL characters.")
     try:
+        value.encode("utf-8")
         parsed = urlsplit(value)
         if (parsed.scheme not in {"http", "https"} or not parsed.hostname
                 or parsed.username is not None or parsed.password is not None
@@ -50,16 +51,23 @@ def address_to_url(value: str) -> str:
         return value
     if value.startswith("//"):
         return safe_external_url("https:" + value)
+    if "://" in value:
+        return safe_external_url(value)
     if not any(char.isspace() for char in value):
         candidate = urlsplit("//" + value)
         host = candidate.hostname or ""
         loopback = host.lower() == "localhost" or host.lower().endswith(".localhost")
+        ip_literal = False
         try:
-            loopback = loopback or ipaddress.ip_address(host).is_loopback
+            address = ipaddress.ip_address(host)
+            ip_literal = True
+            loopback = loopback or address.is_loopback
         except ValueError:
             pass
         if loopback:
             return safe_external_url("http://" + value)
+        if ip_literal or ("." in host and (":" not in value or candidate.port is not None)):
+            return safe_external_url("https://" + value)
     if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", value):
         return safe_external_url(value)
     if "." in value and not any(char.isspace() for char in value):

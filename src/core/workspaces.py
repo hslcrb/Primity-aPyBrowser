@@ -43,18 +43,23 @@ def _read_json(path, default):
         if path.stat().st_size > MAX_JSON_BYTES:
             raise ValueError("file is too large")
         return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, UnicodeError) as error:
+    except (OSError, ValueError, UnicodeError, RecursionError) as error:
         raise WorkspaceError(f"설정 파일을 읽을 수 없습니다. 원본을 보존했습니다: {path.name}") from error
 
 
 def _atomic_json(path, value):
     """완성된 파일만 교체한다. / Replace only a fully written file."""
+    try:
+        encoded = (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    except (ValueError, TypeError, UnicodeError, RecursionError) as error:
+        raise WorkspaceError("저장할 데이터의 형식 또는 문자 인코딩이 올바르지 않습니다.") from error
+    if len(encoded) > MAX_JSON_BYTES:
+        raise WorkspaceError("저장 데이터는 2 MB를 넘을 수 없습니다. 기존 파일을 유지합니다.")
     temporary = None
     try:
         descriptor, temporary = tempfile.mkstemp(prefix=".primity-", dir=path.parent)
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            json.dump(value, stream, ensure_ascii=False, indent=2)
-            stream.write("\n")
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(encoded)
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, path)
@@ -104,7 +109,7 @@ class WorkspaceStore:
         path = self.root
         for part in parts:
             path = path / part
-            if path.is_symlink():
+            if path.is_symlink() or path.resolve() != path:
                 raise WorkspaceError("다른 폴더로 연결된 프로필 경로는 사용할 수 없습니다.")
         try:
             path.resolve().relative_to(self.root)
@@ -128,7 +133,7 @@ class WorkspaceStore:
                 raise WorkspaceError("중복 작업공간이 있습니다. 설정 파일을 보존했습니다.")
             ids.add(item["id"])
             names.add(name.casefold())
-        if data.get("active_id") not in ids:
+        if not isinstance(data.get("active_id"), str) or data["active_id"] not in ids:
             raise WorkspaceError("마지막 작업공간을 찾을 수 없습니다. 설정 파일을 보존했습니다.")
 
     def _save_catalog(self, catalog):
@@ -169,7 +174,7 @@ class WorkspaceStore:
 
     def path(self, workspace_id, kind):
         self.get(workspace_id)
-        if kind not in {"qt", "cache", "chrome", "state"}:
+        if not isinstance(kind, str) or kind not in {"qt", "cache", "chrome", "state"}:
             raise WorkspaceError("지원하지 않는 저장소 종류입니다.")
         path = self._safe_path("workspaces", workspace_id, kind)
         try:
@@ -196,13 +201,15 @@ class WorkspaceStore:
     def preferences(self, workspace_id):
         result = _read_json(self._state_path(workspace_id, "preferences.json"),
                             {"theme": "dark", "language": "ko"})
-        if (not isinstance(result, dict) or result.get("theme") not in {"dark", "light"}
-                or result.get("language") not in {"ko", "en"}):
+        if (not isinstance(result, dict) or not isinstance(result.get("theme"), str)
+                or not isinstance(result.get("language"), str)
+                or result["theme"] not in {"dark", "light"} or result["language"] not in {"ko", "en"}):
             raise WorkspaceError("표시 설정이 올바르지 않습니다. 파일을 보존했습니다.")
         return {"theme": result["theme"], "language": result["language"]}
 
     def save_preferences(self, workspace_id, *, theme, language):
-        if theme not in {"dark", "light"} or language not in {"ko", "en"}:
+        if (not isinstance(theme, str) or not isinstance(language, str)
+                or theme not in {"dark", "light"} or language not in {"ko", "en"}):
             raise WorkspaceError("지원하지 않는 테마 또는 언어입니다.")
         _atomic_json(self._state_path(workspace_id, "preferences.json"),
                      {"theme": theme, "language": language})
@@ -224,7 +231,10 @@ class WorkspaceStore:
                     flattened.append({"title": title, "url": value})
             items = flattened
         valid = validate_bookmarks(items)
-        merged = validate_bookmarks([*self.bookmarks(workspace_id), *valid])
+        by_url = {}
+        for item in [*self.bookmarks(workspace_id), *valid]:
+            by_url.setdefault(item["url"], item)
+        merged = validate_bookmarks(list(by_url.values()))
         self.save_bookmarks(workspace_id, merged)
         return len(merged)
 

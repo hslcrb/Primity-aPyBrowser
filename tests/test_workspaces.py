@@ -118,3 +118,55 @@ def test_failed_atomic_replace_preserves_previous_catalog(tmp_path, monkeypatch)
     assert store.catalog_path.read_bytes() == before
     assert len(store.list()) == 1
 
+
+def test_oversized_serialized_bookmarks_preserve_previous_file(tmp_path):
+    store = WorkspaceStore(tmp_path)
+    original = [{"title": "Original", "url": "https://example.com/"}]
+    store.save_bookmarks(store.active_id, original)
+    oversized = [{"title": str(i), "url": "https://example.com/" + "a" * 385 + str(i)}
+                 for i in range(4800)]
+    with pytest.raises(WorkspaceError):
+        store.save_bookmarks(store.active_id, oversized)
+    assert store.bookmarks(store.active_id) == original
+
+
+@pytest.mark.parametrize("bad_value", [[], {}, None, 123])
+def test_malformed_active_id_is_a_storage_error(tmp_path, bad_value):
+    store = WorkspaceStore(tmp_path)
+    payload = json.loads(store.catalog_path.read_text())
+    payload["active_id"] = bad_value
+    store.catalog_path.write_text(json.dumps(payload))
+    with pytest.raises(WorkspaceError):
+        WorkspaceStore(tmp_path)
+
+
+@pytest.mark.parametrize("bad_value", [[], {}, None, 123])
+def test_malformed_preferences_are_storage_errors(tmp_path, bad_value):
+    store = WorkspaceStore(tmp_path)
+    path = store.path(store.active_id, "state") / "preferences.json"
+    path.write_text(json.dumps({"theme": bad_value, "language": "ko"}))
+    with pytest.raises(WorkspaceError):
+        store.preferences(store.active_id)
+
+
+def test_invalid_unicode_and_deep_json_do_not_overwrite_data(tmp_path):
+    store = WorkspaceStore(tmp_path)
+    with pytest.raises(WorkspaceError):
+        store.save_bookmarks(store.active_id, [{"title": "\ud800", "url": "https://example.com"}])
+    assert store.bookmarks(store.active_id) == []
+    path = store.path(store.active_id, "state") / "bookmarks.json"
+    content = "[" * 10000 + "]" * 10000
+    path.write_text(content)
+    with pytest.raises(WorkspaceError):
+        store.bookmarks(store.active_id)
+    assert path.read_text() == content
+
+
+def test_reimport_same_bookmarks_is_idempotent(tmp_path):
+    store = WorkspaceStore(tmp_path)
+    items = [{"title": str(i), "url": f"https://example.com/{i}"} for i in range(2501)]
+    store.save_bookmarks(store.active_id, items)
+    store.import_bookmarks(store.active_id, store.export_bookmarks(store.active_id))
+    assert store.bookmarks(store.active_id) == items
+
+
