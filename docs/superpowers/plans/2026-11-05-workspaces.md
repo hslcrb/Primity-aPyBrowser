@@ -35,5 +35,7 @@
 
 검증된 제품 상태: 77 tests passed, compileall 통과, Linux onedir 빌드·로컬 웹페이지/JavaScript 기동 확인. 상세는 [검증 기록](../../verification-20261105.md)을 참조한다.
 
+통합 직전 재조회에서 PR #1을 통한 동시 병합을 감지해 기존 main 기준 작업을 중단했다. 관측된 tree가 검증한 tree와 같음을 확인했으며, 해당 기존 이력을 보존한다. 예외 기록 후 최신 main `10013828d8e93c74e8781271c36f8df188efa73b`를 첫 부모로 삼아 최종 API 2부모 통합을 수행한다. PR 경유 사실과 처리 근거는 [작업 대장](../../tasks/20261105-workspaces.md)에 남긴다.
+
 실행 기록은 [작업 대장](../../tasks/20261105-workspaces.md)에 계속 남긴다.
 
