@@ -1,10 +1,15 @@
+.git
+.venv
 __pycache__
 *.pyc
-.venv
-.DS_Store
-dist/
-build/
-*.spec
-# Docker
-Dockerfile
-.dockerignore
+.pytest_cache
+build
+dist
+data
+*.db
+*.db-*
+passwords.json
+profiles
+workspaces
+instance.lock
+workspaces.json

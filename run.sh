@@ -1,7 +1,9 @@
-#!/bin/bash
-source .venv/bin/activate
-export QT_IM_MODULE=fcitx
-export GTK_IM_MODULE=fcitx
-export XMODIFIERS=@im=fcitx
-# Ensure PySide6 can see its own plugins and any injected system plugins
-python3 main.py
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "$0")"
+if [[ ! -x .venv/bin/python ]]; then
+    echo "먼저 가상환경과 requirements.txt를 설치하세요. See README.md."
+    exit 1
+fi
+exec .venv/bin/python main.py "$@"
+
