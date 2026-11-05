@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["gui: real QtWebEngine tests; requires a display or offscreen platform"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+

@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM python:3.12-slim-bookworm
 
 # Install system dependencies required for QtWebEngine
 ARG DEBIAN_FRONTEND=noninteractive
@@ -26,8 +26,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-render-util0 \
     libxcb-xinerama0 \
     libxcb-xfixes0 \
+    libxcb-cursor0 \
+    libxkbfile1 \
     libxshmfence1 \
     libegl1 \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -35,10 +38,16 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# 일반 사용자로 Chromium 샌드박스를 유지한다. / Keep Chromium sandboxed as a normal user.
+RUN useradd --create-home --uid 1000 primity
+COPY --chown=primity:primity main.py LICENSE NOTICE ./
+COPY --chown=primity:primity src ./src
+COPY --chown=primity:primity assets ./assets
 
 # Set environment variable for containerized Qt apps
 ENV QT_DEBUG_PLUGINS=0
 ENV QT_QPA_PLATFORM=xcb
 
+USER primity
 CMD ["python", "main.py"]
+
