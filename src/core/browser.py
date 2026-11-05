@@ -169,6 +169,7 @@ class PrimityBrowser(QMainWindow):
         self.tabs.currentChanged.connect(self.update_navigation)
         self.tabs.tabBarDoubleClicked.connect(lambda i: self.add_new_tab() if i == -1 else None)
         plus = QPushButton("+")
+        plus.setFixedSize(36, 32)
         plus.setAccessibleName("New tab")
         plus.clicked.connect(lambda: self.add_new_tab())
         self.tabs.setCornerWidget(plus, Qt.TopRightCorner)
@@ -472,7 +473,8 @@ class PrimityBrowser(QMainWindow):
             self.language, self.theme = preferences["language"], preferences["theme"]
         self.setStyleSheet(workspace_stylesheet(self.theme))
         label = self.workspace.name[:18] + ("…" if len(self.workspace.name) > 18 else "")
-        self.workspace_button.setText(("◌ " if self.private else "◯ ") + label)
+        self.workspace_button.setText(("◌ " if self.private else "◯ ") + label
+                                      + (self.t(" · 시크릿", " · Private") if self.private else ""))
         self.workspace_button.setToolTip(self.t("작업공간 선택 · ", "Choose workspace · ") + self.workspace.name)
         self.workspace_button.setAccessibleName(self.workspace.name)
         self.url_bar.setPlaceholderText(self.t("검색 또는 주소 입력 · Ctrl+L", "Search or enter address · Ctrl+L"))

@@ -1,5 +1,7 @@
 """흑백 작업공간 UI. / Monochrome workspace widgets."""
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QLineEdit, QPushButton, QFrame)
@@ -7,6 +9,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 
 def workspace_stylesheet(theme):
     dark = theme == "dark"
+    close_icon = (Path(__file__).resolve().parents[2] / "assets/icons" /
+                  ("close_white.svg" if dark else "close_black.svg")).as_posix()
     background, surface, foreground, muted, border, hover = (
         ("#141414", "#202020", "#f4f4f4", "#b8b8b8", "#454545", "#303030") if dark
         else ("#f5f5f5", "#ffffff", "#171717", "#585858", "#c8c8c8", "#e8e8e8"))
@@ -33,6 +37,8 @@ def workspace_stylesheet(theme):
                        border-top-right-radius: 8px; }}
         QTabBar::tab:selected {{ background: {surface}; color: {foreground}; }}
         QTabBar::tab:hover {{ background: {hover}; }}
+        QTabBar::close-button {{ image: url("{close_icon}"); width: 14px; height: 14px; }}
+        QTabBar::close-button:hover {{ background: {border}; border-radius: 3px; }}
         QStatusBar {{ color: {muted}; border-top: 1px solid {border}; }}
         QProgressBar {{ border: 0; background: {background}; max-height: 3px; }}
         QProgressBar::chunk {{ background: {foreground}; }}
